@@ -1,0 +1,29 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Task {
+  id             String   @id @default(uuid())
+  status         String   @default("pending") // pending, processing, completed, failed
+  prompt         String
+  referenceImage String?
+  aspectRatios   String[]
+  model          String   @default("tongyi_wanxiang")
+  images         Image[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Image {
+  id          String   @id @default(uuid())
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId      String
+  url         String
+  aspectRatio String
+  createdAt   DateTime @default(now())
+}

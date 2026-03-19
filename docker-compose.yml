@@ -1,0 +1,58 @@
+# 地毯 AI 出图 — 全栈 Next.js + PostgreSQL（可选 Redis）
+# 使用：复制 .env.docker.example 为 .env 后执行 docker compose up -d --build
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ecommercepic}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecommercepic_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-ecommercepic}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # $$ 在 compose 中转义为容器内 $，随 POSTGRES_* 环境变量变化
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  app:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        DATABASE_URL: postgresql://ecommercepic:ecommercepic_change_me@db:5432/ecommercepic?schema=public
+    image: ecommercepic-app:latest
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ecommercepic}:${POSTGRES_PASSWORD:-ecommercepic_change_me}@db:5432/${POSTGRES_DB:-ecommercepic}?schema=public
+      UPLOAD_DIR: /data/uploads
+      NODE_ENV: production
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # 可选：队列/缓存（当前应用未强制依赖，按需启用 profile）
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    profiles:
+      - with-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redisdata:/data
+
+volumes:
+  pgdata:
+  uploads:
+  redisdata:
