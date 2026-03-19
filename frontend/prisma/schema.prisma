@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 数据模型：Task / Prompt / UploadedImage / GeneratedImage
+// 先以可演进方式存储 product 配置（JSON 字符串），后续再拆表。
+
+model Task {
+  id            String   @id @default(cuid())
+  name          String
+  status        String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  productName   String
+  category      String?
+  sellingPoints  String? // JSON string
+  targetAudience String?
+  scenesBusiness String? // JSON string
+  scenesHome     String? // JSON string
+  modelProfile   String?
+  aspectRatios   String? // JSON string
+
+  totalCount     Int      @default(25)
+  finishedCount  Int      @default(0)
+
+  prompts        Prompt[]
+  uploads        UploadedImage[]
+  images         GeneratedImage[]
+}
+
+model Prompt {
+  id        String   @id @default(cuid())
+  taskId    String
+  index     Int
+  type      String
+  title     String
+  text      String
+  status    String   @default("READY")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@unique([taskId, index])
+}
+
+model UploadedImage {
+  id        String   @id @default(cuid())
+  taskId    String
+  url       String
+  type      String
+  material  String?
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+}
+
+model GeneratedImage {
+  id          String   @id @default(cuid())
+  taskId      String
+  promptId    String?
+  url         String
+  aspectRatio String
+  createdAt   DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([promptId])
+}
+

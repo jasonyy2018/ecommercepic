@@ -1,0 +1,29 @@
+# Dependencies & build
+node_modules
+.next
+out
+dist
+
+# Env & local data (runtime injects via compose)
+.env
+.env.*
+!.env.example
+
+# Uploads & local DB (use volumes in Docker)
+.data
+
+# Git & IDE
+.git
+.gitignore
+*.md
+.vscode
+.idea
+
+# Tests & misc
+coverage
+*.log
+npm-debug.log*
+
+# OS
+Thumbs.db
+.DS_Store
