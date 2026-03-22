@@ -41,24 +41,55 @@ function toPngResponse(bytes: Uint8Array): Response {
   });
 }
 
-/** 统一把 AI 返回值变成 PNG 字节 */
+/** 统一把 AI 返回值变成 PNG 字节（与 worker.js 逻辑对齐） */
 function normalizeImageOutput(raw: unknown): Uint8Array {
+  if (raw == null) {
+    throw new Error("Cloudflare API 的 result 为空");
+  }
   if (raw instanceof Uint8Array) return raw;
   if (raw instanceof ArrayBuffer) return new Uint8Array(raw);
 
-  if (raw && typeof raw === "object" && "image" in raw) {
-    const img = (raw as { image: unknown }).image;
-    if (typeof img === "string") {
-      const bin = atob(img);
+  if (typeof raw === "string" && raw.length > 64) {
+    try {
+      const bin = atob(raw.trim());
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      if (out.length > 0) return out;
+    } catch {
+      /* 非 base64 */
+    }
+  }
+
+  if (Array.isArray(raw) && raw.length > 0 && typeof raw[0] === "number") {
+    return Uint8Array.from(raw);
+  }
+
+  if (raw && typeof raw === "object") {
+    if ("image" in raw) {
+      const img = (raw as { image: unknown }).image;
+      if (typeof img === "string") {
+        const bin = atob(img);
+        const out = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+        return out;
+      }
+      if (img instanceof Uint8Array) return img;
+      if (img instanceof ArrayBuffer) return new Uint8Array(img);
+      if (Array.isArray(img) && img.length && typeof img[0] === "number") {
+        return Uint8Array.from(img);
+      }
+    }
+    if ("data" in raw && typeof (raw as { data: unknown }).data === "string") {
+      const bin = atob((raw as { data: string }).data);
       const out = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
       return out;
     }
-    if (img instanceof Uint8Array) return img;
-    if (img instanceof ArrayBuffer) return new Uint8Array(img);
   }
 
-  throw new Error("Workers AI 返回格式无法识别为图片，请查模型文档或换用 env.AI.run 返回值类型");
+  const preview =
+    typeof raw === "object" ? JSON.stringify(raw).slice(0, 240) : String(raw).slice(0, 240);
+  throw new Error(`无法解析图片 result，预览：${preview}`);
 }
 
 export default {

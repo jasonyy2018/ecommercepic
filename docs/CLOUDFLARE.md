@@ -49,3 +49,30 @@ CLOUDFLARE_WORKER_URL=https://your-worker.workers.dev
 
 - `/generate` 在未配 URL 时有黄色提示；**只配 URL** 后提示消失，`workerConfigured: true`。
 - `GET /api/generations` 的 JSON 中 `workerConfigured` 同理。
+
+## 仍然出现 HTTP 500 时怎么区分
+
+| 报错里出现 | 含义 |
+|------------|------|
+| **`Worker HTTP 5xx`** + 后面一段 JSON | 问题在 **Cloudflare Worker**（Secret、Token、模型、API 返回格式） |
+| **`数据库` / `Prisma` / `503`** | 问题在 **Next + Postgres**（`DATABASE_URL`、迁移） |
+| **`EACCES` / `uploads`** | 问题在 **本机/容器上传目录权限** |
+
+### Worker 侧自查（推荐顺序）
+
+1. 浏览器 **GET** 打开 `WORKER_URL`：看 `secretsConfigured`、`cfApiTokenLength` 是否真为已配置（长度 > 0）。  
+2. 本机执行（把地址换成你的）：
+
+   ```bash
+   curl.exe -X POST "https://xxx.workers.dev" -H "Content-Type: application/json" -d "{\"prompt\":\"a red apple\"}" -o out.png
+   ```
+
+   - 若得到 **PNG**：Worker 正常，再查 Next 的 `WORKER_URL` 与是否重启容器。  
+   - 若 `out.png` 实为文本：打开看 `error` 字段（Token 权限、额度、`result` 解析失败等）。  
+3. Worker 上若设置了 **`WORKER_SECRET`**，Next 的 `.env` 里 **`WORKER_SECRET` 必须一致**，否则会 **401**（不是 500）。
+
+### 常见 Worker 500 原因
+
+- Secret **名称拼错**（须 `CF_ACCOUNT_ID`、`CF_API_TOKEN`），或改完后 **未再 Deploy**。  
+- API Token **没有 Workers AI → Edit**，或已过期。  
+- 账户 **Workers AI 额度/计费** 未开通或超限（看 Cloudflare 控制台 AI 用量与报错 JSON）。

@@ -12,6 +12,9 @@
 #   ./deploy/ubuntu-oneclick.sh --logs     # 跟随日志
 #
 # 首次部署前：复制 .env.docker.example 为 .env 并修改 POSTGRES_PASSWORD 等。
+#
+# Cloudflare Worker（生图）不在本脚本内部署：在 Cloudflare 控制台 / wrangler 部署
+# workers/generate-image/；服务器 .env 可选填 WORKER_URL、WORKER_SECRET，见 docs/CLOUDFLARE.md
 # =============================================================================
 
 set -euo pipefail
@@ -32,7 +35,7 @@ warn() { echo -e "${YLW}[deploy]${NC} $*"; }
 err() { echo -e "${RED}[deploy]${NC} $*" >&2; }
 
 usage() {
-  sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 DO_PULL=0
@@ -154,6 +157,7 @@ echo ""
 log "部署完成。"
 echo "  - 本机 HTTP: http://127.0.0.1:${HTTP_PORT}/"
 echo "  - AI 场景页: http://127.0.0.1:${HTTP_PORT}/generate"
+echo "  - Worker：本脚本不部署；见 workers/generate-image/README.md；.env 可配 WORKER_URL"
 echo "  - 查看日志:  $0 --logs"
 echo "  - 停止服务:  $0 --down"
 echo ""

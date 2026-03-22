@@ -23,22 +23,55 @@ function toPngResponse(bytes) {
 }
 
 function normalizeImageOutput(raw) {
+  if (raw == null) {
+    throw new Error("Cloudflare API 的 result 为空（可能模型未返回图片）");
+  }
   if (raw instanceof Uint8Array) return raw;
   if (raw instanceof ArrayBuffer) return new Uint8Array(raw);
 
-  if (raw && typeof raw === "object" && "image" in raw) {
-    const img = raw.image;
-    if (typeof img === "string") {
-      const bin = atob(img);
+  // REST 常见：整段 base64 字符串
+  if (typeof raw === "string" && raw.length > 64) {
+    try {
+      const bin = atob(raw.trim());
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      if (out.length > 0) return out;
+    } catch (_) {
+      /* 非 base64 */
+    }
+  }
+
+  // 字节数组 JSON
+  if (Array.isArray(raw) && raw.length > 0 && typeof raw[0] === "number") {
+    return Uint8Array.from(raw);
+  }
+
+  if (raw && typeof raw === "object") {
+    if ("image" in raw) {
+      const img = raw.image;
+      if (typeof img === "string") {
+        const bin = atob(img);
+        const out = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+        return out;
+      }
+      if (img instanceof Uint8Array) return img;
+      if (img instanceof ArrayBuffer) return new Uint8Array(img);
+      if (Array.isArray(img) && img.length && typeof img[0] === "number") {
+        return Uint8Array.from(img);
+      }
+    }
+    if ("data" in raw && typeof raw.data === "string") {
+      const bin = atob(raw.data);
       const out = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
       return out;
     }
-    if (img instanceof Uint8Array) return img;
-    if (img instanceof ArrayBuffer) return new Uint8Array(img);
   }
 
-  throw new Error("Workers AI 返回格式无法识别为图片");
+  const preview =
+    typeof raw === "object" ? JSON.stringify(raw).slice(0, 240) : String(raw).slice(0, 240);
+  throw new Error("无法解析图片 result，预览：" + preview);
 }
 
 export default {
