@@ -15,6 +15,11 @@
 
 const MODEL = "@cf/stabilityai/stable-diffusion-xl-base-1.0";
 
+/** 必须是 Dashboard / wrangler 里「Workers AI」类型的 Binding，不能是普通字符串变量 */
+function hasRealWorkersAi(env) {
+  return env.AI != null && typeof env.AI.run === "function";
+}
+
 function toPngResponse(bytes) {
   return new Response(bytes, {
     headers: {
@@ -50,7 +55,15 @@ export default {
    */
   async fetch(request, env) {
     if (request.method === "GET") {
-      return Response.json({ ok: true, service: "generate-image", model: MODEL });
+      return Response.json({
+        ok: true,
+        service: "generate-image",
+        model: MODEL,
+        workersAiBindingOk: hasRealWorkersAi(env),
+        hint: hasRealWorkersAi(env)
+          ? "Workers AI 绑定正常"
+          : "若 POST 失败：Bindings 里需「Workers AI」类型且名为 AI，或设 Secrets CF_ACCOUNT_ID+CF_API_TOKEN",
+      });
     }
 
     if (request.method !== "POST") {
@@ -83,24 +96,17 @@ export default {
       /** @type {Uint8Array} */
       let png;
 
-      if (env.AI) {
+      const accountId = (env.CF_ACCOUNT_ID || "").trim();
+      const token = (env.CF_API_TOKEN || "").trim();
+
+      if (hasRealWorkersAi(env)) {
         const out = await env.AI.run(MODEL, { prompt, width, height });
         png = normalizeImageOutput(out);
         return toPngResponse(png);
       }
 
-      const accountId = (env.CF_ACCOUNT_ID || "").trim();
-      const token = (env.CF_API_TOKEN || "").trim();
-      if (!accountId || !token) {
-        return Response.json(
-          {
-            error:
-              '请绑定 Workers AI（变量名 AI）或设置 Secrets：CF_ACCOUNT_ID、CF_API_TOKEN',
-          },
-          { status: 500 },
-        );
-      }
-
+      // env.AI 存在但不是 Binding（例如误加了普通变量名 AI）→ 不要用 .run，直接走 REST 或报错
+      if (accountId && token) {
       const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${MODEL}`;
       const cfRes = await fetch(url, {
         method: "POST",
@@ -131,6 +137,25 @@ export default {
         return Response.json({ error: `AI HTTP ${cfRes.status}: ${text}` }, { status: 502 });
       }
       return toPngResponse(buf);
+      }
+
+      if (env.AI != null) {
+        return Response.json(
+          {
+            error:
+              "检测到名为 AI 的配置，但不是 Workers AI 绑定：请到 Settings → Bindings 添加「Workers AI」类型、Variable name 填 AI；不要只用 Environment variables 里加名为 AI 的文本。也可删除误配的 AI，改设 Secrets：CF_ACCOUNT_ID、CF_API_TOKEN 走 REST。",
+          },
+          { status: 500 },
+        );
+      }
+
+      return Response.json(
+        {
+          error:
+            "请二选一：① Bindings 添加 Workers AI（变量名 AI）；② Secrets 设置 CF_ACCOUNT_ID + CF_API_TOKEN",
+        },
+        { status: 500 },
+      );
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       return Response.json({ error: message.slice(0, 500) }, { status: 500 });

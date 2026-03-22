@@ -28,6 +28,10 @@ type Body = {
 
 const MODEL = "@cf/stabilityai/stable-diffusion-xl-base-1.0";
 
+function hasRealWorkersAi(env: Env): boolean {
+  return Boolean(env.AI && typeof (env.AI as { run?: unknown }).run === "function");
+}
+
 function toPngResponse(bytes: Uint8Array): Response {
   return new Response(bytes, {
     headers: {
@@ -92,9 +96,12 @@ export default {
     try {
       let png: Uint8Array;
 
-      // —— 推荐路径：同账号 Workers AI 绑定（无需 REST Token）——
-      if (env.AI) {
-        const out = await env.AI.run(MODEL, {
+      const accountId = env.CF_ACCOUNT_ID?.trim();
+      const token = env.CF_API_TOKEN?.trim();
+
+      // 必须用 Dashboard「Workers AI」类 Binding；普通 Environment variable 名叫 AI 会导致 .run is not a function
+      if (hasRealWorkersAi(env)) {
+        const out = await env.AI!.run(MODEL, {
           prompt,
           width,
           height,
@@ -103,19 +110,7 @@ export default {
         return toPngResponse(png);
       }
 
-      // —— 备选：REST API（账号 ID、Token 均用 secret / vars，勿写死）——
-      const accountId = env.CF_ACCOUNT_ID?.trim();
-      const token = env.CF_API_TOKEN?.trim();
-      if (!accountId || !token) {
-        return Response.json(
-          {
-            error:
-              "未配置 AI：请在 wrangler.toml 增加 [ai] binding = \"AI\"，或设置 secret CF_ACCOUNT_ID + CF_API_TOKEN",
-          },
-          { status: 500 },
-        );
-      }
-
+      if (accountId && token) {
       const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${MODEL}`;
       const cfRes = await fetch(url, {
         method: "POST",
@@ -151,6 +146,25 @@ export default {
         return Response.json({ error: `AI HTTP ${cfRes.status}: ${text}` }, { status: 502 });
       }
       return toPngResponse(buf);
+      }
+
+      if (env.AI != null) {
+        return Response.json(
+          {
+            error:
+              "名为 AI 的配置不是 Workers AI 绑定：请用 wrangler [ai] binding 或 Dashboard Bindings 添加「Workers AI」；勿在 Environment variables 里加名为 AI 的文本。或删除误配并设置 CF_ACCOUNT_ID + CF_API_TOKEN 走 REST。",
+          },
+          { status: 500 },
+        );
+      }
+
+      return Response.json(
+        {
+          error:
+            "未配置 AI：wrangler.toml 增加 [ai] binding = \"AI\"，或设置 secret CF_ACCOUNT_ID + CF_API_TOKEN",
+        },
+        { status: 500 },
+      );
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
       return Response.json({ error: message.slice(0, 500) }, { status: 500 });

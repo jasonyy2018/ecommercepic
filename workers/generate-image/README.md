@@ -19,6 +19,14 @@ binding = "AI"
 npx wrangler deploy
 ```
 
+### `env.AI.run is not a function`
+
+说明 **`AI` 不是 Workers AI 绑定**：若在 Dashboard 的 **Environment variables** 里加了名为 `AI` 的**普通文本**，`env.AI` 没有 `.run`。
+
+**处理：** 删掉该变量 → **Settings → Bindings → Add → Workers AI**，Variable name 填 **`AI`** → 保存并重新部署。用浏览器 **GET** 打开 Worker 地址，新版 `worker.js` 会返回 **`workersAiBindingOk: true`** 表示绑定正确。
+
+**或** 不设 AI 绑定，只设 Secrets **`CF_ACCOUNT_ID` + `CF_API_TOKEN`**，代码会自动走 REST。
+
 ## 备选：REST + API Token
 
 若暂时不用 `[ai]` 绑定，可：
