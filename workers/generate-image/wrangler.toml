@@ -1,0 +1,7 @@
+name = "ecommercepic-generate-image"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+# wrangler secret put WORKER_SECRET
+# [vars]
+# WORKER_SECRET = "dev-only-replace-with-secret"

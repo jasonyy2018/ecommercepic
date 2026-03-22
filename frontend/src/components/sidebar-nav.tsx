@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems = [
+  { href: "/generate", label: "AI 场景生成" },
   { href: "/create", label: "智能生成" },
   { href: "/canvas", label: "画布模式" },
   { href: "/workflow", label: "工作流模式" },

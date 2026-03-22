@@ -78,3 +78,21 @@ model GeneratedImage {
   @@index([promptId])
 }
 
+// Cloudflare Workers AI 异步生成记录（本地磁盘存结果图）
+model Generation {
+  id           String   @id @default(cuid())
+  userId       String   @default("anonymous")
+  imageUrl     String
+  scene        String
+  prompt       String
+  status       String   @default("pending")
+  resultUrl    String?
+  errorMessage String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+

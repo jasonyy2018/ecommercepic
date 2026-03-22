@@ -16,6 +16,12 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+### AI 场景图 MVP（本地存图）
+
+- 页面：**`/generate`** — 上传产品图 → 选场景 → 生成 → 下载；历史记录在页内。
+- API：`/api/generations`、`/api/generations/[id]/run`；结果写入 `UPLOAD_DIR/generations/<id>/result.png`。
+- 可选环境变量：`CLOUDFLARE_WORKER_URL`、`CLOUDFLARE_WORKER_SECRET`（见 `.env.example`）。
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
