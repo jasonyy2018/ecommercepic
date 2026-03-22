@@ -173,9 +173,11 @@ export default function GeneratePage() {
 
       {workerConfigured === false ? (
         <div className="rounded-[6px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          当前未配置 <code className="text-xs">CLOUDFLARE_WORKER_URL</code> /{" "}
-          <code className="text-xs">CLOUDFLARE_WORKER_SECRET</code>
-          ：将使用<strong>源图副本</strong>写入结果路径，用于验证上传与下载链路；配置 Worker 后即为真实 AI 出图。
+          当前未配置 <code className="text-xs">CLOUDFLARE_WORKER_URL</code> 或{" "}
+          <code className="text-xs">WORKER_URL</code>
+          ：将使用<strong>源图副本</strong>写入结果路径，用于验证上传与下载链路。MVP 只需配 URL；{" "}
+          <code className="text-xs">CLOUDFLARE_WORKER_SECRET</code> /{" "}
+          <code className="text-xs">WORKER_SECRET</code> 可选，上线前建议开启 Bearer 校验。
         </div>
       ) : null}
 

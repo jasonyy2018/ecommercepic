@@ -70,13 +70,12 @@ export async function runGeneration(id: string) {
   try {
     let out: Buffer;
     if (isWorkerConfigured()) {
-      const workerRes = await callGenerateImageWorker({
+      out = await callGenerateImageWorker({
         scene: gen.scene,
         prompt: gen.prompt,
         sourceImageBase64: imageBuffer.toString("base64"),
         sourceMime: mime,
       });
-      out = Buffer.from(workerRes.data, "base64");
     } else {
       // 未配置 Worker：用源图副本作为「联调占位」，便于验证存储与下载链路
       out = imageBuffer.length > 0 ? imageBuffer : TINY_PNG;

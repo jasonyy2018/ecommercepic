@@ -35,6 +35,11 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-ecommercepic}:${POSTGRES_PASSWORD:-ecommercepic_change_me}@db:5432/${POSTGRES_DB:-ecommercepic}?schema=public
       UPLOAD_DIR: /data/uploads
       NODE_ENV: production
+      # Worker（MVP 可只配 URL；密钥可选）— 见 docs/CLOUDFLARE.md
+      CLOUDFLARE_WORKER_URL: ${CLOUDFLARE_WORKER_URL:-}
+      CLOUDFLARE_WORKER_SECRET: ${CLOUDFLARE_WORKER_SECRET:-}
+      WORKER_URL: ${WORKER_URL:-}
+      WORKER_SECRET: ${WORKER_SECRET:-}
     volumes:
       - uploads:/data/uploads
     depends_on:

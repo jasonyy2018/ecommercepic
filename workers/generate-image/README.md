@@ -1,6 +1,6 @@
 # generate-image Worker
 
-与 Next.js 配合：`CLOUDFLARE_WORKER_URL` 指向本 Worker 的 HTTPS 地址，`CLOUDFLARE_WORKER_SECRET` 与 Worker 内 `WORKER_SECRET` 一致。
+与 Next.js 配合：MVP 只需 Next 侧配置 `CLOUDFLARE_WORKER_URL` 或 `WORKER_URL`。可选：`CLOUDFLARE_WORKER_SECRET` / `WORKER_SECRET` 与 Worker 内 `WORKER_SECRET` 一致；未设置 `WORKER_SECRET` 时本示例 Worker **不校验** Bearer（仅测跑）。
 
 ## 配置密钥
 

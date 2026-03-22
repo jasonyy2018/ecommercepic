@@ -50,4 +50,6 @@ npm run db:migrate:deploy
 npm run dev
 ```
 
+Cloudflare Worker 与 `WORKER_SECRET` 配置见 **[docs/CLOUDFLARE.md](./docs/CLOUDFLARE.md)**（勿把 `cfut_` API Token 与 Bearer 密钥混用）。
+
 更多见 [frontend/README.md](./frontend/README.md)。

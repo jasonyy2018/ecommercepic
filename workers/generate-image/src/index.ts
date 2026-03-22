@@ -7,7 +7,8 @@
  */
 
 export interface Env {
-  WORKER_SECRET: string;
+  /** 未设置时 MVP 不校验 Bearer（仅测跑；上线请配置 Secret） */
+  WORKER_SECRET?: string;
 }
 
 type Body = {
@@ -23,10 +24,12 @@ export default {
       return new Response("Method Not Allowed", { status: 405 });
     }
 
-    const auth = request.headers.get("Authorization") ?? "";
-    const expected = `Bearer ${env.WORKER_SECRET}`;
-    if (!env.WORKER_SECRET || auth !== expected) {
-      return Response.json({ error: "unauthorized" }, { status: 401 });
+    if (env.WORKER_SECRET) {
+      const auth = request.headers.get("Authorization") ?? "";
+      const expected = `Bearer ${env.WORKER_SECRET}`;
+      if (auth !== expected) {
+        return Response.json({ error: "unauthorized" }, { status: 401 });
+      }
     }
 
     let body: Body;
@@ -36,8 +39,8 @@ export default {
       return Response.json({ error: "invalid json" }, { status: 400 });
     }
 
-    if (!body.prompt || !body.scene) {
-      return Response.json({ error: "prompt and scene required" }, { status: 400 });
+    if (!body.prompt) {
+      return Response.json({ error: "prompt required" }, { status: 400 });
     }
 
     // TODO: 调用 env.AI.run(...) 等 Workers AI 绑定，用 body.sourceImageBase64 做图生图 / 参考图。
@@ -48,7 +51,7 @@ export default {
       data: stubPng,
       format: "png",
       note: "stub: replace with Workers AI output",
-      echo: { scene: body.scene, promptLen: body.prompt.length, hasSource: Boolean(body.sourceImageBase64) },
+      echo: { promptLen: body.prompt.length, hasSource: Boolean(body.sourceImageBase64) },
     });
   },
 };
