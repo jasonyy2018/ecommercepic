@@ -9,8 +9,10 @@
   { "prompt": "【场景: door_mat】\n你的正文 prompt…" }
   ```
 - Worker → Next 响应（二选一均可）：
-  1. **`Content-Type: application/json`**，且 JSON 含 **`{ "data": "<base64图片>" }`**；或  
-  2. **图片二进制**（例如 `image/png`），与 `fetch().arrayBuffer()` 一致。
+  1. **`Content-Type: image/png`**（或 `image/jpeg` 等）+ **图片二进制正文**（推荐，与 `arrayBuffer()` 一致）；或  
+  2. **`Content-Type: application/json`**，且 JSON 含 **`{ "data": "<base64图片>" }`**（**勿**返回空的 JSON 正文，否则会报错）。
+
+若误把**图片二进制**标成 `application/json` 且正文非合法 JSON，也会失败；请改对 `Content-Type`。
 
 > 公网 `*.workers.dev` 无鉴权时任何人可调用，MVP 测跑可以，**上线前请加 Bearer 或其它门禁**。
 

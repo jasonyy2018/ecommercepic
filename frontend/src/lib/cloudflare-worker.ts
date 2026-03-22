@@ -64,20 +64,39 @@ export async function callGenerateImageWorker(payload: WorkerGeneratePayload): P
     throw new Error(`Worker HTTP ${res.status}: ${text.slice(0, 800)}`);
   }
 
+  const raw = Buffer.from(await res.arrayBuffer());
   const ct = (res.headers.get("content-type") ?? "").toLowerCase();
 
   if (ct.includes("application/json")) {
-    const json = (await res.json()) as { data?: string; format?: string; error?: string };
+    const text = raw.toString("utf8").trim();
+    if (!text) {
+      throw new Error(
+        "Worker 声明 Content-Type 为 JSON 但正文为空。请让 Worker 返回图片二进制，或返回 JSON：{ \"data\": \"<base64>\" }",
+      );
+    }
+    let json: { data?: string; format?: string; error?: string };
+    try {
+      json = JSON.parse(text) as typeof json;
+    } catch {
+      // 部分 Worker 误标为 json 实为图片/文本
+      if (raw.length > 0 && raw[0] === 0x89 && raw[1] === 0x50) {
+        return raw;
+      }
+      throw new Error(
+        `Worker 声明为 JSON 但无法解析。正文开头：${text.slice(0, 120)}`,
+      );
+    }
     if (json.error) throw new Error(String(json.error).slice(0, 500));
     if (!json.data || typeof json.data !== "string") {
-      throw new Error("Worker 返回 JSON 但缺少 data（base64）");
+      throw new Error(
+        "Worker 返回 JSON 但缺少 data（base64）。若直接返回图片，请改用 Content-Type: image/png（勿用 application/json）。",
+      );
     }
     return Buffer.from(json.data, "base64");
   }
 
-  const buf = Buffer.from(await res.arrayBuffer());
-  if (buf.length === 0) {
+  if (raw.length === 0) {
     throw new Error("Worker 返回空内容");
   }
-  return buf;
+  return raw;
 }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
 import type { ProductImage, ProductImageType } from "@/lib/types";
+import { parseJsonResponse } from "@/lib/safe-json-response";
 
 const SCENES = [
   { value: "door_mat", label: "门口地垫 / 商铺门面" },
@@ -49,7 +50,7 @@ export default function GeneratePage() {
   const loadHistory = useCallback(async () => {
     try {
       const res = await fetch("/api/generations?limit=30", { cache: "no-store" });
-      const json = await res.json();
+      const json = await parseJsonResponse<{ error?: string; items?: GenRow[]; workerConfigured?: boolean }>(res);
       if (!res.ok) throw new Error(json?.error || "加载历史失败");
       setHistory(json.items ?? []);
       if (typeof json.workerConfigured === "boolean") setWorkerConfigured(json.workerConfigured);
@@ -140,7 +141,11 @@ export default function GeneratePage() {
           prompt: prompt.trim() || defaultPrompt(scene),
         }),
       });
-      const createJson = await createRes.json();
+      const createJson = await parseJsonResponse<{
+        error?: string;
+        generation?: { id: string };
+        workerConfigured?: boolean;
+      }>(createRes);
       if (!createRes.ok) throw new Error(createJson?.error || "创建任务失败");
       if (typeof createJson.workerConfigured === "boolean") {
         setWorkerConfigured(createJson.workerConfigured);
@@ -149,7 +154,10 @@ export default function GeneratePage() {
       if (!id) throw new Error("创建任务失败");
 
       const runRes = await fetch(`/api/generations/${id}/run`, { method: "POST" });
-      const runJson = await runRes.json();
+      const runJson = await parseJsonResponse<{
+        error?: string;
+        generation?: GenRow;
+      }>(runRes);
       if (!runRes.ok) throw new Error(runJson?.error || "生成失败");
 
       const g = runJson.generation as GenRow;

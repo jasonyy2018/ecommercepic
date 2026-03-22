@@ -1,34 +1,21 @@
 /**
- * Next.js → Worker：POST JSON { prompt } → Workers AI 出图 → 返回 image/png（与当前 Next 端一致）
+ * ecommercepic — 生图 Worker（纯 JS，可粘贴到 Cloudflare 控制台 Quick Edit）
  *
- * 推荐：使用 wrangler 的 [ai] 绑定调用 env.AI.run（同账号下无需 CF_API_TOKEN）。
- * 备选：设置 CF_ACCOUNT_ID + CF_API_TOKEN（secret）走 REST（勿把账号 ID 写死在代码里）。
+ * 与 Next.js 约定：
+ *   POST + Content-Type: application/json
+ *   body: { "prompt": "必填", "width": 1024, "height": 1024 可选 }
+ *   成功：返回 image/png 二进制
+ *
+ * Cloudflare 里请配置（二选一）：
+ *   A) 推荐：Workers AI 绑定，变量名 AI（与 wrangler [ai] binding = "AI" 一致）
+ *   B) 备选：Secrets — CF_ACCOUNT_ID、CF_API_TOKEN（Workers AI Edit 权限）
+ *
+ * 可选 Secret：WORKER_SECRET — 若设置，请求须带 Header: Authorization: Bearer <同值>
  */
-
-export interface Env {
-  AI?: AiBinding;
-  WORKER_SECRET?: string;
-  CF_ACCOUNT_ID?: string;
-  CF_API_TOKEN?: string;
-}
-
-/** Wrangler [ai] binding = "AI" 时的最小类型 */
-type AiBinding = {
-  run(
-    model: string,
-    args: Record<string, unknown>,
-  ): Promise<Uint8Array | { image?: string } | ArrayBuffer>;
-};
-
-type Body = {
-  prompt?: string;
-  width?: number;
-  height?: number;
-};
 
 const MODEL = "@cf/stabilityai/stable-diffusion-xl-base-1.0";
 
-function toPngResponse(bytes: Uint8Array): Response {
+function toPngResponse(bytes) {
   return new Response(bytes, {
     headers: {
       "Content-Type": "image/png",
@@ -37,13 +24,12 @@ function toPngResponse(bytes: Uint8Array): Response {
   });
 }
 
-/** 统一把 AI 返回值变成 PNG 字节 */
-function normalizeImageOutput(raw: unknown): Uint8Array {
+function normalizeImageOutput(raw) {
   if (raw instanceof Uint8Array) return raw;
   if (raw instanceof ArrayBuffer) return new Uint8Array(raw);
 
   if (raw && typeof raw === "object" && "image" in raw) {
-    const img = (raw as { image: unknown }).image;
+    const img = raw.image;
     if (typeof img === "string") {
       const bin = atob(img);
       const out = new Uint8Array(bin.length);
@@ -54,11 +40,15 @@ function normalizeImageOutput(raw: unknown): Uint8Array {
     if (img instanceof ArrayBuffer) return new Uint8Array(img);
   }
 
-  throw new Error("Workers AI 返回格式无法识别为图片，请查模型文档或换用 env.AI.run 返回值类型");
+  throw new Error("Workers AI 返回格式无法识别为图片");
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  /**
+   * @param {Request} request
+   * @param { { AI?: { run: (m: string, a: object) => Promise<unknown> }, WORKER_SECRET?: string, CF_ACCOUNT_ID?: string, CF_API_TOKEN?: string } } env
+   */
+  async fetch(request, env) {
     if (request.method === "GET") {
       return Response.json({ ok: true, service: "generate-image", model: MODEL });
     }
@@ -74,9 +64,9 @@ export default {
       }
     }
 
-    let body: Body;
+    let body;
     try {
-      body = (await request.json()) as Body;
+      body = await request.json();
     } catch {
       return Response.json({ error: "invalid json" }, { status: 400 });
     }
@@ -90,27 +80,22 @@ export default {
     const height = Math.min(2048, Math.max(256, Number(body.height) || 1024));
 
     try {
-      let png: Uint8Array;
+      /** @type {Uint8Array} */
+      let png;
 
-      // —— 推荐路径：同账号 Workers AI 绑定（无需 REST Token）——
       if (env.AI) {
-        const out = await env.AI.run(MODEL, {
-          prompt,
-          width,
-          height,
-        });
+        const out = await env.AI.run(MODEL, { prompt, width, height });
         png = normalizeImageOutput(out);
         return toPngResponse(png);
       }
 
-      // —— 备选：REST API（账号 ID、Token 均用 secret / vars，勿写死）——
-      const accountId = env.CF_ACCOUNT_ID?.trim();
-      const token = env.CF_API_TOKEN?.trim();
+      const accountId = (env.CF_ACCOUNT_ID || "").trim();
+      const token = (env.CF_API_TOKEN || "").trim();
       if (!accountId || !token) {
         return Response.json(
           {
             error:
-              "未配置 AI：请在 wrangler.toml 增加 [ai] binding = \"AI\"，或设置 secret CF_ACCOUNT_ID + CF_API_TOKEN",
+              '请绑定 Workers AI（变量名 AI）或设置 Secrets：CF_ACCOUNT_ID、CF_API_TOKEN',
           },
           { status: 500 },
         );
@@ -126,18 +111,13 @@ export default {
         body: JSON.stringify({ prompt, width, height }),
       });
 
-      const ct = cfRes.headers.get("content-type") ?? "";
+      const ct = cfRes.headers.get("content-type") || "";
 
-      // REST 一般为 JSON 信封；少数场景可能是二进制
       if (ct.includes("application/json")) {
-        const json = (await cfRes.json()) as {
-          success?: boolean;
-          errors?: { message?: string }[];
-          result?: unknown;
-        };
+        const json = await cfRes.json();
         if (!cfRes.ok || json.success === false) {
           const msg =
-            json.errors?.map((e) => e.message).join("; ") ||
+            (json.errors && json.errors.map((e) => e.message).join("; ")) ||
             `Cloudflare API HTTP ${cfRes.status}`;
           return Response.json({ error: msg }, { status: 502 });
         }
@@ -151,7 +131,7 @@ export default {
         return Response.json({ error: `AI HTTP ${cfRes.status}: ${text}` }, { status: 502 });
       }
       return toPngResponse(buf);
-    } catch (e: unknown) {
+    } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       return Response.json({ error: message.slice(0, 500) }, { status: 500 });
     }

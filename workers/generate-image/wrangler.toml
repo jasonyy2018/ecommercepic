@@ -2,6 +2,13 @@ name = "ecommercepic-generate-image"
 main = "src/index.ts"
 compatibility_date = "2024-09-23"
 
+# 推荐：Workers AI 绑定（同账号下调用 env.AI.run，无需在 Worker 里放 CF_API_TOKEN）
+[ai]
+binding = "AI"
+
+# 可选：MVP 完成后启用 Bearer
 # wrangler secret put WORKER_SECRET
-# [vars]
-# WORKER_SECRET = "dev-only-replace-with-secret"
+
+# 若不用 [ai]、坚持用 REST，再设（勿把账号 ID 写进代码）：
+# wrangler secret put CF_ACCOUNT_ID
+# wrangler secret put CF_API_TOKEN
