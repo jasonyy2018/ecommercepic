@@ -99,17 +99,7 @@ export default {
       const accountId = env.CF_ACCOUNT_ID?.trim();
       const token = env.CF_API_TOKEN?.trim();
 
-      // 必须用 Dashboard「Workers AI」类 Binding；普通 Environment variable 名叫 AI 会导致 .run is not a function
-      if (hasRealWorkersAi(env)) {
-        const out = await env.AI!.run(MODEL, {
-          prompt,
-          width,
-          height,
-        });
-        png = normalizeImageOutput(out);
-        return toPngResponse(png);
-      }
-
+      // 有 Token 时优先 REST，避免误配「环境变量 AI」时仍去调 env.AI.run
       if (accountId && token) {
       const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${MODEL}`;
       const cfRes = await fetch(url, {
@@ -146,6 +136,16 @@ export default {
         return Response.json({ error: `AI HTTP ${cfRes.status}: ${text}` }, { status: 502 });
       }
       return toPngResponse(buf);
+      }
+
+      if (hasRealWorkersAi(env)) {
+        const out = await env.AI!.run(MODEL, {
+          prompt,
+          width,
+          height,
+        });
+        png = normalizeImageOutput(out);
+        return toPngResponse(png);
       }
 
       if (env.AI != null) {

@@ -27,16 +27,23 @@ npx wrangler deploy
 
 **或** 不设 AI 绑定，只设 Secrets **`CF_ACCOUNT_ID` + `CF_API_TOKEN`**，代码会自动走 REST。
 
-## 备选：REST + API Token
+## 控制台部署（最省事）：只用 REST + Secrets
 
-若暂时不用 `[ai]` 绑定，可：
+在 Worker **Settings → Variables → Secrets** 添加（名称必须一致）：
+
+- `CF_ACCOUNT_ID` — 账户 ID  
+- `CF_API_TOKEN` — API Token（权限含 **Workers AI → Edit**）
+
+保存并部署后，**不必**配置 Workers AI Binding；代码会**优先走 REST**，避免误加「环境变量名叫 AI」导致 `env.AI.run is not a function`。
+
+## 备选：仅 wrangler + `[ai]` 绑定
 
 ```bash
 npx wrangler secret put CF_ACCOUNT_ID
 npx wrangler secret put CF_API_TOKEN
 ```
 
-Token 需具备 **Workers AI → Edit**。**不要把 Account ID 写死在仓库代码里**（你曾在别处贴出过 ID，建议在控制台轮换相关 Token）。
+（同上 Token；**不要把 Account ID 写进仓库**。）
 
 REST 返回一般是 **JSON**（`success` + `result`），不是整段 raw PNG；示例代码已按 JSON 解析 `result` 再转二进制。
 

@@ -7,8 +7,8 @@
  *   成功：返回 image/png 二进制
  *
  * Cloudflare 里请配置（二选一）：
- *   A) 推荐：Workers AI 绑定，变量名 AI（与 wrangler [ai] binding = "AI" 一致）
- *   B) 备选：Secrets — CF_ACCOUNT_ID、CF_API_TOKEN（Workers AI Edit 权限）
+ *   A) Secrets：CF_ACCOUNT_ID、CF_API_TOKEN（Workers AI Edit）— 控制台最省事，且优先于 env.AI
+ *   B) Bindings：Workers AI，变量名 AI（勿在 Environment variables 里加同名文本）
  *
  * 可选 Secret：WORKER_SECRET — 若设置，请求须带 Header: Authorization: Bearer <同值>
  */
@@ -99,13 +99,7 @@ export default {
       const accountId = (env.CF_ACCOUNT_ID || "").trim();
       const token = (env.CF_API_TOKEN || "").trim();
 
-      if (hasRealWorkersAi(env)) {
-        const out = await env.AI.run(MODEL, { prompt, width, height });
-        png = normalizeImageOutput(out);
-        return toPngResponse(png);
-      }
-
-      // env.AI 存在但不是 Binding（例如误加了普通变量名 AI）→ 不要用 .run，直接走 REST 或报错
+      // 只要配了 Token，永远走 REST，避免误加「环境变量 AI」时被当成有绑定却 .run 报错
       if (accountId && token) {
       const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${MODEL}`;
       const cfRes = await fetch(url, {
@@ -137,6 +131,12 @@ export default {
         return Response.json({ error: `AI HTTP ${cfRes.status}: ${text}` }, { status: 502 });
       }
       return toPngResponse(buf);
+      }
+
+      if (hasRealWorkersAi(env)) {
+        const out = await env.AI.run(MODEL, { prompt, width, height });
+        png = normalizeImageOutput(out);
+        return toPngResponse(png);
       }
 
       if (env.AI != null) {
