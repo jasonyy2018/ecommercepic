@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { ApiError, AspectRatio } from "@/lib/types";
 import { prisma } from "@/lib/prisma";
 import { taskToApi } from "@/lib/db-mappers";
-import { isPrismaConnectionError, DB_SETUP_MESSAGE } from "@/lib/db-error";
+import { toErrorResponse } from "@/lib/api-handle-error";
 
 function pick<T>(arr: T[], i: number): T {
   return arr[i % arr.length];
@@ -63,10 +63,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ taskId: strin
 
   return NextResponse.json({ createdCount: created.length, task: taskToApi(updatedTask) });
   } catch (e) {
-    if (isPrismaConnectionError(e)) {
-      return NextResponse.json<ApiError>({ error: DB_SETUP_MESSAGE }, { status: 503 });
-    }
-    throw e;
+    return toErrorResponse(e, "tasks/images/generate");
   }
 }
 

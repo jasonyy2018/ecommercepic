@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { ApiError } from "@/lib/types";
 import { prisma } from "@/lib/prisma";
 import { taskToApi } from "@/lib/db-mappers";
-import { isPrismaConnectionError, DB_SETUP_MESSAGE } from "@/lib/db-error";
+import { toErrorResponse } from "@/lib/api-handle-error";
 
 export async function GET() {
   try {
@@ -28,32 +28,34 @@ export async function GET() {
   }));
   return NextResponse.json({ items });
   } catch (e) {
-    if (isPrismaConnectionError(e)) {
-      return NextResponse.json<ApiError>({ error: DB_SETUP_MESSAGE }, { status: 503 });
-    }
-    throw e;
+    return toErrorResponse(e, "tasks/GET");
   }
 }
 
 export async function POST(req: Request) {
-  try {
-    const body = (await req.json()) as {
-      mode?: "draft" | "finalize";
-      taskId?: string;
+  let body: {
+    mode?: "draft" | "finalize";
+    taskId?: string;
+    name?: string;
+    product?: {
       name?: string;
-      product?: {
-        name?: string;
-        category?: string;
-        sellingPoints?: string[];
-        targetAudience?: string;
-        scenesBusiness?: string[];
-        scenesHome?: string[];
-        modelProfile?: string;
-        aspectRatios?: string[];
-      };
-      prompts?: { type: any; title: any; text: any }[];
+      category?: string;
+      sellingPoints?: string[];
+      targetAudience?: string;
+      scenesBusiness?: string[];
+      scenesHome?: string[];
+      modelProfile?: string;
+      aspectRatios?: string[];
     };
+    prompts?: { type: any; title: any; text: any }[];
+  };
+  try {
+    body = (await req.json()) as typeof body;
+  } catch {
+    return NextResponse.json<ApiError>({ error: "invalid json" }, { status: 400 });
+  }
 
+  try {
     // 1) Draft task: return taskId for uploads (directory = taskId)
     if (body.mode === "draft") {
       const productName = body.product?.name?.trim() || "未命名地毯";
@@ -118,10 +120,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ task: taskToApi(updated) });
   } catch (e) {
-    if (isPrismaConnectionError(e)) {
-      return NextResponse.json<ApiError>({ error: DB_SETUP_MESSAGE }, { status: 503 });
-    }
-    return NextResponse.json<ApiError>({ error: "invalid json" }, { status: 400 });
+    return toErrorResponse(e, "tasks/POST");
   }
 }
 

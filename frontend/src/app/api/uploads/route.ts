@@ -3,7 +3,7 @@ import path from "node:path";
 import type { ApiError, ProductImage, ProductImageType } from "@/lib/types";
 import { makePublicFileUrl, makeUploadRelPath, safeExtFromMime, UPLOAD_ROOT, writeFileAtomic } from "@/lib/uploads";
 import { prisma } from "@/lib/prisma";
-import { isPrismaConnectionError, DB_SETUP_MESSAGE } from "@/lib/db-error";
+import { toErrorResponse } from "@/lib/api-handle-error";
 
 export const runtime = "nodejs";
 
@@ -61,10 +61,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ items: saved });
   } catch (e) {
-    if (isPrismaConnectionError(e)) {
-      return NextResponse.json<ApiError>({ error: DB_SETUP_MESSAGE }, { status: 503 });
-    }
-    throw e;
+    return toErrorResponse(e, "uploads/POST");
   }
 }
 

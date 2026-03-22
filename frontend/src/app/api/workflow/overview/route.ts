@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import type { ApiError } from "@/lib/types";
-import { DB_SETUP_MESSAGE, isPrismaConnectionError } from "@/lib/db-error";
+import { toErrorResponse } from "@/lib/api-handle-error";
 
 export async function GET() {
   try {
@@ -53,10 +52,7 @@ export async function GET() {
       timeline,
     });
   } catch (e) {
-    if (isPrismaConnectionError(e)) {
-      return NextResponse.json<ApiError>({ error: DB_SETUP_MESSAGE }, { status: 503 });
-    }
-    throw e;
+    return toErrorResponse(e, "workflow/overview");
   }
 }
 

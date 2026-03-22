@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { ApiError } from "@/lib/types";
 import { prisma } from "@/lib/prisma";
-import { isPrismaConnectionError, DB_SETUP_MESSAGE } from "@/lib/db-error";
+import { toErrorResponse } from "@/lib/api-handle-error";
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ taskId: string; promptId: string }> }) {
   const { taskId, promptId } = await ctx.params;
@@ -28,10 +28,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ taskId: strin
 
     return NextResponse.json({ prompt: updated });
   } catch (e) {
-    if (isPrismaConnectionError(e)) {
-      return NextResponse.json<ApiError>({ error: DB_SETUP_MESSAGE }, { status: 503 });
-    }
-    throw e;
+    return toErrorResponse(e, "tasks/prompts/PATCH");
   }
 }
 

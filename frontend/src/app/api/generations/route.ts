@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { ApiError } from "@/lib/types";
 import { prisma } from "@/lib/prisma";
-import { isPrismaConnectionError, DB_SETUP_MESSAGE } from "@/lib/db-error";
+import { toErrorResponse } from "@/lib/api-handle-error";
 import { isWorkerConfigured } from "@/lib/cloudflare-worker";
 import { relFromPublicFileUrl } from "@/lib/generation-runner";
 
@@ -34,10 +34,7 @@ export async function GET(req: Request) {
       workerConfigured: isWorkerConfigured(),
     });
   } catch (e) {
-    if (isPrismaConnectionError(e)) {
-      return NextResponse.json<ApiError>({ error: DB_SETUP_MESSAGE }, { status: 503 });
-    }
-    throw e;
+    return toErrorResponse(e, "generations/GET");
   }
 }
 
@@ -85,9 +82,6 @@ export async function POST(req: Request) {
       workerConfigured: isWorkerConfigured(),
     });
   } catch (e) {
-    if (isPrismaConnectionError(e)) {
-      return NextResponse.json<ApiError>({ error: DB_SETUP_MESSAGE }, { status: 503 });
-    }
-    throw e;
+    return toErrorResponse(e, "generations/POST");
   }
 }

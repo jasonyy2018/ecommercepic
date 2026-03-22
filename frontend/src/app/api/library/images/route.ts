@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { DB_SETUP_MESSAGE, isPrismaConnectionError } from "@/lib/db-error";
-import type { ApiError } from "@/lib/types";
+import { toErrorResponse } from "@/lib/api-handle-error";
 
 export async function GET(req: Request) {
   try {
@@ -57,10 +56,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ items: rows });
   } catch (e) {
-    if (isPrismaConnectionError(e)) {
-      return NextResponse.json<ApiError>({ error: DB_SETUP_MESSAGE }, { status: 503 });
-    }
-    throw e;
+    return toErrorResponse(e, "library/images");
   }
 }
 
