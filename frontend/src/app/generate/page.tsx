@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
 import type { ProductImage, ProductImageType } from "@/lib/types";
-import { parseJsonResponse } from "@/lib/safe-json-response";
+import { formatClientError, parseJsonResponse } from "@/lib/safe-json-response";
 
 const SCENES = [
   { value: "door_mat", label: "门口地垫 / 商铺门面" },
@@ -91,7 +91,7 @@ export default function GeneratePage() {
         },
       }),
     });
-    const json = await res.json();
+    const json = await parseJsonResponse<{ error?: string; task?: { id: string } }>(res);
     if (!res.ok) throw new Error(json?.error || "创建草稿失败");
     const id = json.task?.id as string | undefined;
     if (!id) throw new Error("创建草稿失败");
@@ -110,12 +110,12 @@ export default function GeneratePage() {
       fd.set("type", uploadType);
       fd.append("files", fileList[0]);
       const res = await fetch("/api/uploads", { method: "POST", body: fd });
-      const json = await res.json();
+      const json = await parseJsonResponse<{ error?: string; items?: ProductImage[] }>(res);
       if (!res.ok) throw new Error(json?.error || "上传失败");
       const items = (json.items ?? []) as ProductImage[];
       setImages((prev) => [...prev, ...items].slice(0, 10));
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "上传失败");
+      setError(formatClientError(e) || "上传失败");
     } finally {
       setBusy("idle");
     }
@@ -164,7 +164,7 @@ export default function GeneratePage() {
       setLastResult(g);
       await loadHistory();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "生成失败");
+      setError(formatClientError(e) || "生成失败");
     } finally {
       setBusy("idle");
     }

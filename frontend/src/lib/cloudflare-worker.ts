@@ -67,6 +67,14 @@ export async function callGenerateImageWorker(payload: WorkerGeneratePayload): P
   const raw = Buffer.from(await res.arrayBuffer());
   const ct = (res.headers.get("content-type") ?? "").toLowerCase();
 
+  // 部分 Worker/CDN 把 PNG 标成 json 或漏标 Content-Type：先按魔数识别二进制图
+  if (raw.length >= 8 && raw[0] === 0x89 && raw[1] === 0x50 && raw[2] === 0x4e && raw[3] === 0x47) {
+    return raw;
+  }
+  if (raw.length >= 2 && raw[0] === 0xff && raw[1] === 0xd8) {
+    return raw;
+  }
+
   if (ct.includes("application/json")) {
     const text = raw.toString("utf8").trim();
     if (!text) {

@@ -17,3 +17,13 @@ export async function parseJsonResponse<T = unknown>(res: Response): Promise<T> 
     );
   }
 }
+
+/** 把浏览器里难懂的 JSON 报错转成可读文案 */
+export function formatClientError(e: unknown): string {
+  if (!(e instanceof Error)) return "操作失败";
+  const m = e.message;
+  if (m.includes("Unexpected end of JSON input") || m.includes("JSON.parse")) {
+    return "接口返回了空内容或非 JSON（请检查网络、Next 是否重启、数据库是否可用）";
+  }
+  return m;
+}
