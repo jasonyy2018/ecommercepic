@@ -102,6 +102,26 @@ npm run db:migrate
 
 生产/容器内迁移使用：`npm run db:migrate:deploy`（已由 `docker-entrypoint.sh` 自动执行）。
 
+## 故障：上传报 `EACCES: permission denied, mkdir '/data/uploads/...'`
+
+应用进程以 **`nextjs`（uid 1001）** 运行；若挂载目录属主为 **root**，会无法建子目录。
+
+- **命名卷**（默认 `docker-compose.yml`）：镜像已在 **`docker-entrypoint.sh`** 里对 `UPLOAD_DIR` 执行 `mkdir` + `chown nextjs:nodejs`，**重建镜像并重启**即可：
+
+  ```bash
+  docker compose build --no-cache app
+  docker compose up -d
+  ```
+
+- **本机目录 bind mount**（例如把宿主机路径挂到 `/data/uploads`）：在宿主机上执行一次（Linux）：
+
+  ```bash
+  sudo mkdir -p /你的挂载路径
+  sudo chown -R 1001:1001 /你的挂载路径
+  ```
+
+  Windows Docker Desktop 若仍异常，优先改用**命名卷**，避免把 NTFS 目录直接 bind 为上传根目录。
+
 ## 安全建议（生产）
 
 - 不要暴露数据库端口到公网（`docker-compose.prod.yml` 默认未暴露）。

@@ -31,6 +31,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
+# entrypoint 先以 root 修正 UPLOAD_DIR 权限，再 su-exec 到 nextjs
+RUN apk add --no-cache su-exec
+
 # 与 package.json 中 @prisma/client 主版本对齐，用于 migrate deploy
 RUN npm install -g prisma@6.16.0
 
@@ -43,7 +46,8 @@ COPY --chown=nextjs:nodejs docker-entrypoint.sh ./
 # Windows 检出时可能为 CRLF，避免 shebang 解析失败
 RUN sed -i 's/\r$//' docker-entrypoint.sh && chmod +x docker-entrypoint.sh
 
-USER nextjs
+# 由 entrypoint 修正卷权限后以 nextjs 运行（勿在此 USER nextjs，否则无法 chown /data/uploads）
+USER root
 
 EXPOSE 3000
 ENV PORT=3000
