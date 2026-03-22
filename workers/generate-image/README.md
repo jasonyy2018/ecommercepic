@@ -2,7 +2,9 @@
 
 与 Next.js 约定：**POST** `Content-Type: application/json`，body：`{ "prompt": "…" }`；成功时返回 **`image/png` 二进制**（与当前 `frontend` 里 `cloudflare-worker.ts` 一致）。
 
-**纯 JS 单文件（可粘贴控制台）：** 见同目录 **`worker.js`**。
+**纯 JS 单文件（粘贴 Cloudflare 控制台）：** 见 **`worker.js`** — **仅 REST**，**不包含** `env.AI.run`，可避免 `env.AI.run is not a function`。
+
+部署后先用浏览器 **GET** 打开 Worker URL，看 JSON：`secretsConfigured: true` 且 `cfApiTokenLength > 0` 才说明 Secret 已注入；若为 `false`/长度为 0，说明 Secret 名称不对或**改完 Secret 后未再 Deploy**。
 
 ## 推荐配置（`env.AI.run`）
 
