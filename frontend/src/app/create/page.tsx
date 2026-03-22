@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import type { AspectRatio, ProductImage, ProductImageType, PromptItem } from "@/lib/types";
+import { formatClientError, parseJsonResponse } from "@/lib/safe-json-response";
 
 const RATIOS: { id: AspectRatio; label: string }[] = [
   { id: "1:1", label: "1:1 方形" },
@@ -66,11 +67,11 @@ export default function CreatePage() {
           modelProfile,
         }),
       });
-      const json = await res.json();
+      const json = await parseJsonResponse<{ error?: string; prompts?: PromptItem[] }>(res);
       if (!res.ok) throw new Error(json?.error || "生成失败");
-      setPrompts(json.prompts);
-    } catch (e: any) {
-      setError(e?.message || "生成失败");
+      setPrompts(json.prompts ?? []);
+    } catch (e: unknown) {
+      setError(formatClientError(e) || "生成失败");
     } finally {
       setBusy("idle");
     }
@@ -95,7 +96,7 @@ export default function CreatePage() {
         },
       }),
     });
-    const json = await res.json();
+    const json = await parseJsonResponse<{ error?: string; task?: { id: string } }>(res);
     if (!res.ok) throw new Error(json?.error || "创建草稿失败");
     const id = json.task?.id as string | undefined;
     if (!id) throw new Error("创建草稿失败");
@@ -122,11 +123,11 @@ export default function CreatePage() {
       for (const f of files) fd.append("files", f);
 
       const res = await fetch("/api/uploads", { method: "POST", body: fd });
-      const json = await res.json();
+      const json = await parseJsonResponse<{ error?: string; items?: ProductImage[] }>(res);
       if (!res.ok) throw new Error(json?.error || "上传失败");
       setImages((prev) => [...prev, ...(json.items ?? [])]);
-    } catch (e: any) {
-      setError(e?.message || "上传失败");
+    } catch (e: unknown) {
+      setError(formatClientError(e) || "上传失败");
     } finally {
       setBusy("idle");
     }
@@ -164,11 +165,11 @@ export default function CreatePage() {
           prompts: prompts.map((p) => ({ type: p.type, title: p.title, text: p.text })),
         }),
       });
-      const json = await res.json();
+      const json = await parseJsonResponse<{ error?: string; task: { id: string } }>(res);
       if (!res.ok) throw new Error(json?.error || "创建任务失败");
       router.push(`/tasks/${json.task.id}`);
-    } catch (e: any) {
-      setError(e?.message || "创建任务失败");
+    } catch (e: unknown) {
+      setError(formatClientError(e) || "创建任务失败");
     } finally {
       setBusy("idle");
     }

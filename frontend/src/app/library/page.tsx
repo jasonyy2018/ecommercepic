@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/app/page-header";
+import { formatClientError, parseJsonResponse } from "@/lib/safe-json-response";
 
 export default function LibraryPage() {
   const [query, setQuery] = useState("");
@@ -27,11 +28,11 @@ export default function LibraryPage() {
     try {
       const params = new URLSearchParams({ q: query, type, limit: "80" });
       const res = await fetch(`/api/library/images?${params.toString()}`, { cache: "no-store" });
-      const json = await res.json();
+      const json = await parseJsonResponse<{ error?: string; items?: typeof items }>(res);
       if (!res.ok) throw new Error(json?.error || "加载失败");
       setItems(json.items ?? []);
-    } catch (e: any) {
-      setError(e?.message || "加载失败");
+    } catch (e: unknown) {
+      setError(formatClientError(e) || "加载失败");
     } finally {
       setLoading(false);
     }

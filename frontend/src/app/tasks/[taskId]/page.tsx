@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import type { GenerateTask, PromptItem } from "@/lib/types";
+import { parseJsonResponse } from "@/lib/safe-json-response";
 
 export default function TaskDetailPage() {
   const params = useParams<{ taskId: string }>();
@@ -19,9 +20,13 @@ export default function TaskDetailPage() {
   );
 
   const refresh = async () => {
-    const res = await fetch(`/api/tasks/${taskId}`, { cache: "no-store" });
-    const json = await res.json();
-    if (res.ok) setTask(json.task);
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, { cache: "no-store" });
+      const json = await parseJsonResponse<{ task?: GenerateTask }>(res);
+      if (res.ok && json.task) setTask(json.task);
+    } catch {
+      /* 忽略单次刷新失败 */
+    }
   };
 
   useEffect(() => {

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
+import { formatClientError, parseJsonResponse } from "@/lib/safe-json-response";
 
 export default function CanvasPage() {
   const [activeLayer, setActiveLayer] = useState<string | null>(null);
@@ -17,11 +18,11 @@ export default function CanvasPage() {
     try {
       const q = id ? `?taskId=${encodeURIComponent(id)}` : "";
       const res = await fetch(`/api/canvas/assets${q}`, { cache: "no-store" });
-      const json = await res.json();
+      const json = await parseJsonResponse<{ error?: string; items?: typeof assets }>(res);
       if (!res.ok) throw new Error(json?.error || "加载素材失败");
       setAssets(json.items ?? []);
-    } catch (e: any) {
-      setError(e?.message || "加载素材失败");
+    } catch (e: unknown) {
+      setError(formatClientError(e) || "加载素材失败");
     }
   };
 
@@ -35,7 +36,7 @@ export default function CanvasPage() {
         product: { name: "Canvas 草稿任务", aspectRatios: ["1:1"] },
       }),
     });
-    const json = await res.json();
+    const json = await parseJsonResponse<{ error?: string; task: { id: string } }>(res);
     if (!res.ok) throw new Error(json?.error || "创建草稿失败");
     setTaskId(json.task.id);
     return json.task.id as string;
@@ -50,11 +51,11 @@ export default function CanvasPage() {
       fd.set("type", "DISPLAY");
       for (const f of Array.from(files)) fd.append("files", f);
       const res = await fetch("/api/uploads", { method: "POST", body: fd });
-      const json = await res.json();
+      const json = await parseJsonResponse<{ error?: string }>(res);
       if (!res.ok) throw new Error(json?.error || "上传失败");
       await loadAssets(id);
-    } catch (e: any) {
-      setError(e?.message || "上传失败");
+    } catch (e: unknown) {
+      setError(formatClientError(e) || "上传失败");
     }
   };
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { parseJsonResponse } from "@/lib/safe-json-response";
 
 type TaskRow = {
   id: string;
@@ -23,10 +24,14 @@ export default function TasksPage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const res = await fetch("/api/tasks", { cache: "no-store" });
-      const json = await res.json();
-      if (cancelled) return;
-      setItems(json.items ?? []);
+      try {
+        const res = await fetch("/api/tasks", { cache: "no-store" });
+        const json = await parseJsonResponse<{ items?: TaskRow[] }>(res);
+        if (cancelled) return;
+        setItems(json.items ?? []);
+      } catch {
+        if (!cancelled) setItems([]);
+      }
     })();
     return () => {
       cancelled = true;

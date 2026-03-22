@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/app/page-header";
+import { formatClientError, parseJsonResponse } from "@/lib/safe-json-response";
 
 export default function SettingsPage() {
   const [form, setForm] = useState({
@@ -21,10 +22,14 @@ export default function SettingsPage() {
   const patch = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
   const load = async () => {
-    const res = await fetch("/api/settings", { cache: "no-store" });
-    const json = await res.json();
-    if (res.ok && json.settings) {
-      setForm((p) => ({ ...p, ...json.settings }));
+    try {
+      const res = await fetch("/api/settings", { cache: "no-store" });
+      const json = await parseJsonResponse<{ settings?: Partial<typeof form> }>(res);
+      if (res.ok && json.settings) {
+        setForm((p) => ({ ...p, ...json.settings }));
+      }
+    } catch {
+      /* 设置页加载失败时保持默认表单 */
     }
   };
 
@@ -41,11 +46,11 @@ export default function SettingsPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(form),
       });
-      const json = await res.json();
+      const json = await parseJsonResponse<{ error?: string }>(res);
       if (!res.ok) throw new Error(json?.error || "保存失败");
       setMessage("设置已保存");
-    } catch (e: any) {
-      setMessage(e?.message || "保存失败");
+    } catch (e: unknown) {
+      setMessage(formatClientError(e) || "保存失败");
     } finally {
       setSaving(false);
     }
@@ -53,9 +58,13 @@ export default function SettingsPage() {
 
   const testDb = async () => {
     setMessage(null);
-    const res = await fetch("/api/settings/test-db", { cache: "no-store" });
-    const json = await res.json();
-    setMessage(json?.message || (res.ok ? "连接正常" : "连接失败"));
+    try {
+      const res = await fetch("/api/settings/test-db", { cache: "no-store" });
+      const json = await parseJsonResponse<{ message?: string }>(res);
+      setMessage(json?.message || (res.ok ? "连接正常" : "连接失败"));
+    } catch (e: unknown) {
+      setMessage(formatClientError(e) || "连接失败");
+    }
   };
 
   return (

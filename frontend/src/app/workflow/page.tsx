@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
+import { formatClientError, parseJsonResponse } from "@/lib/safe-json-response";
 
 function Metric({ label, value, emphasize }: { label: string; value: string; emphasize?: boolean }) {
   return (
@@ -31,11 +32,21 @@ export default function WorkflowPage() {
     setError(null);
     try {
       const res = await fetch("/api/workflow/overview", { cache: "no-store" });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "加载失败");
-      setData(json);
-    } catch (e: any) {
-      setError(e?.message || "加载失败");
+      const json = await parseJsonResponse<{
+        error?: string;
+        metrics?: NonNullable<typeof data>["metrics"];
+        queue?: NonNullable<typeof data>["queue"];
+        timeline?: NonNullable<typeof data>["timeline"];
+      }>(res);
+      if (!res.ok) throw new Error(json.error || "加载失败");
+      if (!json.metrics) throw new Error("加载失败");
+      setData({
+        metrics: json.metrics,
+        queue: json.queue ?? [],
+        timeline: json.timeline ?? [],
+      });
+    } catch (e: unknown) {
+      setError(formatClientError(e) || "加载失败");
     } finally {
       setLoading(false);
     }
