@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # ecommercepic — Ubuntu 生产环境 Docker 一键部署
-# 使用：docker-compose.ubuntu.yml（PostgreSQL + Next.js + Nginx，本地卷存图）
+# 使用：docker-compose.ubuntu.yml（PostgreSQL + Next.js，本地卷存图；无内置 Nginx）
 #
 # 用法：
 #   chmod +x deploy/ubuntu-oneclick.sh
@@ -129,8 +129,8 @@ else
   compose up -d --build
 fi
 
-HTTP_PORT="$(grep -E '^UBUNTU_HTTP_PORT=' "$ROOT/$ENV_FILE" 2>/dev/null | cut -d= -f2- | tr -d ' "\r' || true)"
-HTTP_PORT="${HTTP_PORT:-80}"
+HTTP_PORT="$(grep -E '^UBUNTU_APP_PORT=' "$ROOT/$ENV_FILE" 2>/dev/null | cut -d= -f2- | tr -d ' "\r' || true)"
+HTTP_PORT="${HTTP_PORT:-3000}"
 
 if command -v curl >/dev/null 2>&1; then
   log "等待 HTTP 就绪（最多约 120s）..."
@@ -158,6 +158,7 @@ log "部署完成。"
 echo "  - 本机 HTTP: http://127.0.0.1:${HTTP_PORT}/"
 echo "  - AI 场景页: http://127.0.0.1:${HTTP_PORT}/generate"
 echo "  - Worker：本脚本不部署；见 workers/generate-image/README.md；.env 可配 WORKER_URL"
+echo "  - 如用 Nginx Proxy Manager：反代到 http://服务器IP:${HTTP_PORT}"
 echo "  - 查看日志:  $0 --logs"
 echo "  - 停止服务:  $0 --down"
 echo ""

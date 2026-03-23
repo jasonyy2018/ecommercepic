@@ -1,6 +1,6 @@
-# Ubuntu 部署（本地存储 + Nginx + 可选 Cloudflare AI）
+# Ubuntu 部署（本地存储 + 可选 Cloudflare AI）
 
-架构：**Next.js（同机）+ PostgreSQL + 本地磁盘 `UPLOAD_DIR` 存上传图与生成结果**；**AI 生图**由 **Cloudflare Worker + Workers AI** 完成；域名与 CDN 可放在 Cloudflare。
+架构：**Next.js（同机）+ PostgreSQL + 本地磁盘 `UPLOAD_DIR` 存上传图与生成结果**；**AI 生图**由 **Cloudflare Worker + Workers AI** 完成；可由你自己的 Nginx Proxy Manager 反代到 `app:3000`。
 
 ## 1. 目录与数据流
 
@@ -21,15 +21,15 @@ chmod +x deploy/ubuntu-oneclick.sh
 
 常用参数：`--pull`（先 git pull）、`--no-build`（仅重启）、`--down`（停止容器保留卷）、`--logs`（看日志）。详见脚本头部注释。
 
-## 3. 手动 Docker Compose（Nginx 反代）
+## 3. 手动 Docker Compose（直接暴露 3000）
 
 ```bash
 # 配置数据库密码等可放在 .env
 docker compose -f docker-compose.ubuntu.yml --env-file .env up -d --build
 ```
 
-- 对外 **80** 端口由 **Nginx** 反代到 **app:3000**。
-- 如需本机直连 Next 调试，可临时在 `docker-compose.ubuntu.yml` 的 `app` 上增加 `ports: - "3000:3000"`。
+- 对外默认暴露 **3000**（`UBUNTU_APP_PORT` 可改）。
+- 若你使用 Nginx Proxy Manager，请把域名反代到 `http://服务器IP:3000`。
 
 ## 4. Cloudflare Worker 环境变量（服务器）
 

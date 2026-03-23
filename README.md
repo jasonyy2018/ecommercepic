@@ -17,7 +17,7 @@ docker compose up -d --build
 
 详细说明见 **[docs/DOCKER.md](./docs/DOCKER.md)**。
 
-### Ubuntu：Nginx + 本地存图（无 MinIO）
+### Ubuntu：直连 3000 + 本地存图（无 MinIO）
 
 一键部署：
 
@@ -27,7 +27,7 @@ chmod +x deploy/ubuntu-oneclick.sh
 ```
 
 或手动：`docker compose -f docker-compose.ubuntu.yml --env-file .env up -d --build`  
-默认通过 **80** 访问。详见 **[docs/UBUNTU.md](./docs/UBUNTU.md)**。
+默认通过 **3000** 访问（可配 `UBUNTU_APP_PORT`）。详见 **[docs/UBUNTU.md](./docs/UBUNTU.md)**。
 
 前端 **MVP 流程**：侧边栏 **「AI 场景生成」**（`/generate`）→ 上传产品图 → 选场景 → 生成 → 本地下载；历史记录在页面底部表格。
 
