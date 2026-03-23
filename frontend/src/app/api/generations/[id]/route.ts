@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { ApiError } from "@/lib/types";
 import { prisma } from "@/lib/prisma";
 import { toErrorResponse } from "@/lib/api-handle-error";
-import { isWorkerConfigured } from "@/lib/cloudflare-worker";
+import { getImageBackendStatus } from "@/lib/image-generation-backend";
 
 export const runtime = "nodejs";
 
@@ -12,9 +12,12 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   try {
     const gen = await prisma.generation.findUnique({ where: { id } });
     if (!gen) return NextResponse.json<ApiError>({ error: "not found" }, { status: 404 });
+    const b = getImageBackendStatus();
     return NextResponse.json({
       generation: gen,
-      workerConfigured: isWorkerConfigured(),
+      workerConfigured: b.workerConfigured,
+      arkConfigured: b.arkConfigured,
+      imageBackend: b.imageBackend,
     });
   } catch (e) {
     return toErrorResponse(e, "generations/[id]/GET");

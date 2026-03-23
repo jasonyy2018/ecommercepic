@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { ApiError } from "@/lib/types";
 import { prisma } from "@/lib/prisma";
 import { toErrorResponse } from "@/lib/api-handle-error";
-import { isWorkerConfigured } from "@/lib/cloudflare-worker";
+import { getImageBackendStatus } from "@/lib/image-generation-backend";
 import { runGeneration } from "@/lib/generation-runner";
 
 export const runtime = "nodejs";
@@ -17,10 +17,13 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     if (!exists) return NextResponse.json<ApiError>({ error: "not found" }, { status: 404 });
 
     const gen = await runGeneration(id);
+    const b = getImageBackendStatus();
     return NextResponse.json({
       generation: gen,
-      workerConfigured: isWorkerConfigured(),
-      devPlaceholder: !isWorkerConfigured(),
+      workerConfigured: b.workerConfigured,
+      arkConfigured: b.arkConfigured,
+      imageBackend: b.imageBackend,
+      devPlaceholder: b.imageBackend === "placeholder",
     });
   } catch (e) {
     return toErrorResponse(e, "generations/[id]/run");

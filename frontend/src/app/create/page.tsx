@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import type { AspectRatio, ProductImage, ProductImageType, PromptItem } from "@/lib/types";
@@ -43,8 +43,17 @@ export default function CreatePage() {
   const scenesHome = useMemo(() => splitLines(scenesHomeText), [scenesHomeText]);
 
   const [prompts, setPrompts] = useState<PromptItem[] | null>(null);
+  /** 创建任务时仅提交勾选的提示词 */
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [busy, setBusy] = useState<"idle" | "upload" | "gen_prompts" | "create_task">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [promptGenHint, setPromptGenHint] = useState<string | null>(null);
+
+  const selectedCount = useMemo(() => {
+    if (!prompts) return 0;
+    return prompts.filter((p) => selectedIds.has(p.id)).length;
+  }, [prompts, selectedIds]);
 
   const toggleRatio = (r: AspectRatio) => {
     setRatios((prev) => (prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]));
@@ -52,8 +61,15 @@ export default function CreatePage() {
 
   const generatePrompts = async () => {
     setError(null);
+    setPromptGenHint(null);
     setBusy("gen_prompts");
     try {
+      const firstUrl = images[0]?.url;
+      const referenceImageUrl =
+        firstUrl && (firstUrl.startsWith("https://") || firstUrl.startsWith("http://"))
+          ? firstUrl
+          : undefined;
+
       const res = await fetch("/api/prompts/generate", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -65,17 +81,119 @@ export default function CreatePage() {
           scenesBusiness,
           scenesHome,
           modelProfile,
+          ...(referenceImageUrl ? { referenceImageUrl } : {}),
         }),
       });
-      const json = await parseJsonResponse<{ error?: string; prompts?: PromptItem[] }>(res);
+      const json = await parseJsonResponse<{
+        error?: string;
+        prompts?: PromptItem[];
+        promptSource?: string;
+        textModel?: string;
+      }>(res);
       if (!res.ok) throw new Error(json?.error || "生成失败");
-      setPrompts(json.prompts ?? []);
+      const list = json.prompts ?? [];
+      setPrompts(list);
+      setSelectedIds(new Set(list.map((p) => p.id)));
+      if (json.promptSource === "ark") {
+        setPromptGenHint(`已由火山方舟生成（模型：${json.textModel ?? "—"}）`);
+      } else {
+        setPromptGenHint("已使用本地规则模板生成");
+      }
     } catch (e: unknown) {
       setError(formatClientError(e) || "生成失败");
     } finally {
       setBusy("idle");
     }
   };
+
+  const togglePromptSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const selectAllPrompts = useCallback(() => {
+    if (!prompts?.length) return;
+    setSelectedIds(new Set(prompts.map((p) => p.id)));
+  }, [prompts]);
+
+  const selectNoPrompts = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const regeneratePromptRow = useCallback(
+    async (p: PromptItem) => {
+      setError(null);
+      setRegeneratingId(p.id);
+      try {
+        const firstUrl = images[0]?.url;
+        const referenceImageUrl =
+          firstUrl && (firstUrl.startsWith("https://") || firstUrl.startsWith("http://"))
+            ? firstUrl
+            : undefined;
+
+        const res = await fetch("/api/prompts/regenerate-one", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            productName,
+            category,
+            sellingPoints,
+            targetAudience,
+            scenesBusiness,
+            scenesHome,
+            modelProfile,
+            prompt: {
+              index: p.index,
+              type: p.type,
+              title: p.title,
+              text: p.text,
+            },
+            ...(referenceImageUrl ? { referenceImageUrl } : {}),
+          }),
+        });
+        const json = await parseJsonResponse<{
+          error?: string;
+          title?: string;
+          text?: string;
+        }>(res);
+        if (!res.ok) throw new Error(json?.error || "重新生成失败");
+        const title = String(json.title ?? "").trim();
+        const text = String(json.text ?? "").trim();
+        if (!title || !text) throw new Error("接口未返回有效的 title/text");
+
+        const newId = `prompt_${p.index}_${Date.now().toString(16)}`;
+        setPrompts((prev) =>
+          prev!.map((x) => (x.id === p.id ? { ...x, id: newId, title, text } : x)),
+        );
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          if (next.has(p.id)) {
+            next.delete(p.id);
+            next.add(newId);
+          }
+          return next;
+        });
+      } catch (e: unknown) {
+        setError(formatClientError(e) || "重新生成失败");
+      } finally {
+        setRegeneratingId(null);
+      }
+    },
+    [
+      productName,
+      category,
+      sellingPoints,
+      targetAudience,
+      scenesBusiness,
+      scenesHome,
+      modelProfile,
+      images,
+    ],
+  );
 
   const ensureDraftTask = async () => {
     if (draftTaskId) return draftTaskId;
@@ -135,7 +253,14 @@ export default function CreatePage() {
 
   const createTask = async () => {
     if (!prompts?.length) {
-      setError("请先生成 25 条 Prompt");
+      setError("请先生成 Prompt 列表");
+      return;
+    }
+    const chosen = prompts
+      .filter((p) => selectedIds.has(p.id))
+      .sort((a, b) => a.index - b.index);
+    if (chosen.length === 0) {
+      setError("请至少勾选 1 条提示词，再创建任务");
       return;
     }
     setError(null);
@@ -162,7 +287,7 @@ export default function CreatePage() {
             // images are already stored in DB via /api/uploads, no need to send here
             images: [],
           },
-          prompts: prompts.map((p) => ({ type: p.type, title: p.title, text: p.text })),
+          prompts: chosen.map((p) => ({ type: p.type, title: p.title, text: p.text })),
         }),
       });
       const json = await parseJsonResponse<{ error?: string; task: { id: string } }>(res);
@@ -187,7 +312,7 @@ export default function CreatePage() {
           variant="carpetAccent"
           className="px-5 py-2.5 font-space-grotesk font-medium h-auto"
         >
-          生成 25 条 Prompt
+          生成 26 条 Prompt
         </Button>
       </header>
 
@@ -289,56 +414,124 @@ export default function CreatePage() {
             </div>
           </Section>
 
-          <Section title="5. Prompt（25条，可编辑）→ 开始生成图片">
+          <Section title="5. Prompt（26 条，右侧可选中、可改、可单条重生成）→ 创建任务">
             <div className="flex gap-3">
               <Button
                 onClick={generatePrompts}
-                disabled={busy !== "idle"}
+                disabled={busy !== "idle" || regeneratingId !== null}
                 variant="carpetSecondary"
                 className="flex-1 h-auto py-3"
               >
-                生成 25 条 Prompt
+                生成 26 条 Prompt
               </Button>
               <Button
                 onClick={createTask}
-                disabled={busy !== "idle"}
+                disabled={busy !== "idle" || regeneratingId !== null || selectedCount === 0}
                 variant="carpetAccent"
                 className="flex-1 h-auto py-3"
               >
-                创建任务并开始
+                创建任务（已选 {selectedCount} 条）
               </Button>
             </div>
             {error ? <div className="text-sm font-inter text-[#E42313]">{error}</div> : null}
+            {promptGenHint ? (
+              <div className="text-sm font-inter text-[var(--carpet-text-muted)]">{promptGenHint}</div>
+            ) : null}
           </Section>
         </div>
 
         <div className="flex-1 flex flex-col gap-6 pl-12 border-l border-[#E8E8E8] min-w-0">
-          <div className="w-full flex justify-between items-center">
+          <div className="w-full flex flex-wrap items-center justify-between gap-3">
             <h3 className="font-space-grotesk font-semibold text-lg text-[#0D0D0D]">生成预览 / Prompt 列表</h3>
+            {prompts?.length ? (
+              <div className="flex flex-wrap items-center gap-2 text-sm font-inter">
+                <button
+                  type="button"
+                  className="px-2 py-1 rounded border border-[var(--carpet-border)] bg-white hover:bg-[#FAFAFA] text-[#0D0D0D]"
+                  onClick={selectAllPrompts}
+                  disabled={busy !== "idle" || regeneratingId !== null}
+                >
+                  全选
+                </button>
+                <button
+                  type="button"
+                  className="px-2 py-1 rounded border border-[var(--carpet-border)] bg-white hover:bg-[#FAFAFA] text-[#0D0D0D]"
+                  onClick={selectNoPrompts}
+                  disabled={busy !== "idle" || regeneratingId !== null}
+                >
+                  全不选
+                </button>
+                <span className="text-[#7A7A7A]">
+                  已选 <strong className="text-[#0D0D0D]">{selectedCount}</strong> / {prompts.length} 条（仅勾选项会进入任务）
+                </span>
+              </div>
+            ) : null}
           </div>
 
           {!prompts ? (
             <div className="w-full flex-1 bg-[#FAFAFA] border border-dashed border-[var(--carpet-border)] rounded-[6px] flex items-center justify-center">
-              <span className="font-inter text-[#7A7A7A] text-sm">点击“生成 25 条 Prompt”，这里会展示可编辑列表</span>
+              <span className="font-inter text-[#7A7A7A] text-sm">点击「生成 26 条 Prompt」，在此勾选、编辑正文与标题，并可单条重新生成</span>
             </div>
           ) : (
             <div className="w-full flex-1 min-h-0 overflow-y-auto carpet-card">
-              {prompts.map((p) => (
-                <div key={p.id} className="p-4 border-b border-[#E8E8E8]">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="font-inter text-sm font-semibold text-[#0D0D0D]">
-                      {String(p.index).padStart(2, "0")}｜{p.type}｜{p.title}
+              {prompts.map((p) => {
+                const checked = selectedIds.has(p.id);
+                const regenBusy = regeneratingId === p.id;
+                return (
+                  <div
+                    key={p.id}
+                    className={`p-4 border-b border-[#E8E8E8] ${checked ? "bg-[#FAFAFC]" : "bg-white"}`}
+                  >
+                    <div className="flex flex-wrap items-start gap-3">
+                      <label className="flex items-center gap-2 shrink-0 cursor-pointer pt-1">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-[var(--carpet-accent)]"
+                          checked={checked}
+                          onChange={() => togglePromptSelected(p.id)}
+                          disabled={busy !== "idle" || regeneratingId !== null}
+                        />
+                        <span className="font-inter text-xs font-semibold text-[#7A7A7A] whitespace-nowrap">
+                          #{String(p.index).padStart(2, "0")} {p.type}
+                        </span>
+                      </label>
+                      <div className="flex-1 min-w-[200px] space-y-2">
+                        <input
+                          className="w-full carpet-input p-2 font-inter text-sm font-semibold text-[#0D0D0D]"
+                          value={p.title}
+                          placeholder="标题（可改）"
+                          readOnly={regenBusy}
+                          onChange={(e) =>
+                            setPrompts((prev) =>
+                              prev!.map((x) => (x.id === p.id ? { ...x, title: e.target.value } : x)),
+                            )
+                          }
+                        />
+                        <textarea
+                          className="w-full h-24 carpet-input p-3 font-inter text-sm resize-y min-h-[5rem]"
+                          value={p.text}
+                          placeholder="英文提示词正文（可改）"
+                          readOnly={regenBusy}
+                          onChange={(e) =>
+                            setPrompts((prev) =>
+                              prev!.map((x) => (x.id === p.id ? { ...x, text: e.target.value } : x)),
+                            )
+                          }
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="carpetSecondary"
+                        className="shrink-0 h-auto py-2 px-3 text-xs"
+                        disabled={busy !== "idle" || regeneratingId !== null}
+                        onClick={() => void regeneratePromptRow(p)}
+                      >
+                        {regenBusy ? "生成中…" : "重新生成"}
+                      </Button>
                     </div>
                   </div>
-                  <textarea
-                    className="mt-2 w-full h-20 carpet-input p-3 font-inter text-sm resize-none"
-                    value={p.text}
-                    onChange={(e) =>
-                      setPrompts((prev) => prev!.map((x) => (x.id === p.id ? { ...x, text: e.target.value } : x)))
-                    }
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

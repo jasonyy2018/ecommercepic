@@ -7,6 +7,9 @@ import { formatClientError, parseJsonResponse } from "@/lib/safe-json-response";
 
 export default function SettingsPage() {
   const [form, setForm] = useState({
+    textLlmProvider: "template" as "template" | "ark",
+    arkTextModel: "doubao-seed-2-0-lite-260215",
+    arkBaseUrl: "",
     textModelKey: "",
     imageModelKey: "",
     videoModelKey: "",
@@ -74,8 +77,41 @@ export default function SettingsPage() {
       <div className="grid grid-cols-2 gap-4">
         <section className="carpet-card p-4">
           <h3 className="font-space-grotesk text-base font-semibold text-[var(--carpet-text)]">模型供应商</h3>
+          <p className="mt-1 text-xs text-[var(--carpet-text-muted)]">
+            文案提示词（/create 生成脚本）：可选本地模板或火山方舟 Responses。环境变量{" "}
+            <code className="text-[10px]">TEXT_LLM_PROVIDER</code>、<code className="text-[10px]">ARK_API_KEY</code>、
+            <code className="text-[10px]">ARK_TEXT_MODEL</code> 优先于本页。
+          </p>
           <div className="mt-3 space-y-2">
-            <input className="w-full carpet-input" placeholder="Text Model API Key" value={form.textModelKey} onChange={(e) => patch("textModelKey", e.target.value)} />
+            <label className="block text-xs text-[var(--carpet-text-muted)]">文案 / 提示词来源</label>
+            <select
+              className="w-full carpet-input"
+              value={form.textLlmProvider}
+              onChange={(e) => patch("textLlmProvider", e.target.value as "template" | "ark")}
+            >
+              <option value="template">本地规则模板（不消耗 API）</option>
+              <option value="ark">火山方舟（Doubao，Responses API）</option>
+            </select>
+            <input
+              className="w-full carpet-input"
+              placeholder="Ark 文本模型端点 ID（如 doubao-seed-2-0-lite-260215）"
+              value={form.arkTextModel}
+              onChange={(e) => patch("arkTextModel", e.target.value)}
+            />
+            <input
+              className="w-full carpet-input"
+              placeholder="Ark Base URL（可选，默认 https://ark.cn-beijing.volces.com/api/v3）"
+              value={form.arkBaseUrl}
+              onChange={(e) => patch("arkBaseUrl", e.target.value)}
+            />
+            <input
+              className="w-full carpet-input"
+              placeholder="文本 API Key（Ark，与 ARK_API_KEY 二选一；生产建议用环境变量）"
+              value={form.textModelKey}
+              onChange={(e) => patch("textModelKey", e.target.value)}
+              type="password"
+              autoComplete="off"
+            />
             <input className="w-full carpet-input" placeholder="Image Model API Key" value={form.imageModelKey} onChange={(e) => patch("imageModelKey", e.target.value)} />
             <input className="w-full carpet-input" placeholder="Video Model API Key（可选）" value={form.videoModelKey} onChange={(e) => patch("videoModelKey", e.target.value)} />
           </div>

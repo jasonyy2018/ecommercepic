@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { ApiError } from "@/lib/types";
 import { prisma } from "@/lib/prisma";
 import { toErrorResponse } from "@/lib/api-handle-error";
-import { isWorkerConfigured } from "@/lib/cloudflare-worker";
+import { getImageBackendStatus } from "@/lib/image-generation-backend";
 import { relFromPublicFileUrl } from "@/lib/generation-runner";
 
 export const runtime = "nodejs";
@@ -29,9 +29,12 @@ export async function GET(req: Request) {
         updatedAt: true,
       },
     });
+    const b = getImageBackendStatus();
     return NextResponse.json({
       items,
-      workerConfigured: isWorkerConfigured(),
+      workerConfigured: b.workerConfigured,
+      arkConfigured: b.arkConfigured,
+      imageBackend: b.imageBackend,
     });
   } catch (e) {
     return toErrorResponse(e, "generations/GET");
@@ -77,9 +80,12 @@ export async function POST(req: Request) {
         status: "pending",
       },
     });
+    const b = getImageBackendStatus();
     return NextResponse.json({
       generation: gen,
-      workerConfigured: isWorkerConfigured(),
+      workerConfigured: b.workerConfigured,
+      arkConfigured: b.arkConfigured,
+      imageBackend: b.imageBackend,
     });
   } catch (e) {
     return toErrorResponse(e, "generations/POST");

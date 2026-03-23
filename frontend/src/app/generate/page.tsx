@@ -45,15 +45,25 @@ export default function GeneratePage() {
   const [error, setError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<GenRow | null>(null);
   const [history, setHistory] = useState<GenRow[]>([]);
-  const [workerConfigured, setWorkerConfigured] = useState<boolean | null>(null);
+  /** null = 尚未从接口拉取 */
+  const [imageBackend, setImageBackend] = useState<"ark" | "cloudflare" | "placeholder" | null>(null);
 
   const loadHistory = useCallback(async () => {
     try {
       const res = await fetch("/api/generations?limit=30", { cache: "no-store" });
-      const json = await parseJsonResponse<{ error?: string; items?: GenRow[]; workerConfigured?: boolean }>(res);
+      const json = await parseJsonResponse<{
+        error?: string;
+        items?: GenRow[];
+        workerConfigured?: boolean;
+        imageBackend?: string;
+      }>(res);
       if (!res.ok) throw new Error(json?.error || "加载历史失败");
       setHistory(json.items ?? []);
-      if (typeof json.workerConfigured === "boolean") setWorkerConfigured(json.workerConfigured);
+      if (json.imageBackend === "ark" || json.imageBackend === "cloudflare" || json.imageBackend === "placeholder") {
+        setImageBackend(json.imageBackend);
+      } else if (typeof json.workerConfigured === "boolean") {
+        setImageBackend(json.workerConfigured ? "cloudflare" : "placeholder");
+      }
     } catch {
       /* 历史非阻塞 */
     }
@@ -145,10 +155,17 @@ export default function GeneratePage() {
         error?: string;
         generation?: { id: string };
         workerConfigured?: boolean;
+        imageBackend?: string;
       }>(createRes);
       if (!createRes.ok) throw new Error(createJson?.error || "创建任务失败");
-      if (typeof createJson.workerConfigured === "boolean") {
-        setWorkerConfigured(createJson.workerConfigured);
+      if (
+        createJson.imageBackend === "ark" ||
+        createJson.imageBackend === "cloudflare" ||
+        createJson.imageBackend === "placeholder"
+      ) {
+        setImageBackend(createJson.imageBackend);
+      } else if (typeof createJson.workerConfigured === "boolean") {
+        setImageBackend(createJson.workerConfigured ? "cloudflare" : "placeholder");
       }
       const id = createJson.generation?.id as string | undefined;
       if (!id) throw new Error("创建任务失败");
@@ -174,18 +191,32 @@ export default function GeneratePage() {
     <div className="w-full h-full p-10 flex flex-col gap-8 bg-[var(--carpet-bg-soft)] overflow-y-auto">
       <PageHeader
         title="AI 场景图生成"
-        subtitle="上传产品图 → 选择场景 → 本地存储结果（可选接入 Cloudflare Workers AI）"
+        subtitle="上传产品图 → 选择场景 → 本地存储结果（Cloudflare Worker 或火山方舟 Seedream）"
         actionLabel="刷新历史"
         onAction={loadHistory}
       />
 
-      {workerConfigured === false ? (
-        <div className="rounded-[6px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          当前未配置 <code className="text-xs">CLOUDFLARE_WORKER_URL</code> 或{" "}
-          <code className="text-xs">WORKER_URL</code>
-          ：将使用<strong>源图副本</strong>写入结果路径，用于验证上传与下载链路。MVP 只需配 URL；{" "}
-          <code className="text-xs">CLOUDFLARE_WORKER_SECRET</code> /{" "}
-          <code className="text-xs">WORKER_SECRET</code> 可选，上线前建议开启 Bearer 校验。
+      {imageBackend === "placeholder" ? (
+        <div className="rounded-[6px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 space-y-2">
+          <p>
+            当前为<strong>占位模式</strong>：结果将写入<strong>源图副本</strong>，用于验证上传与下载链路。要真实生图请任选其一：
+          </p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>
+              <strong>火山方舟 Seedream</strong>：配置 <code className="text-xs">ARK_API_KEY</code>，可选{" "}
+              <code className="text-xs">IMAGE_GENERATION_PROVIDER=ark</code>（同时配了 Worker 时强制用 Ark）。
+            </li>
+            <li>
+              <strong>Cloudflare Worker</strong>：配置 <code className="text-xs">CLOUDFLARE_WORKER_URL</code> 或{" "}
+              <code className="text-xs">WORKER_URL</code>；可选 <code className="text-xs">WORKER_SECRET</code>。
+            </li>
+          </ul>
+        </div>
+      ) : null}
+      {imageBackend === "ark" ? (
+        <div className="rounded-[6px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          当前生图后端：<strong>火山方舟 Seedream</strong>（产品图以参考图形式传入模型）。地域/模型可通过{" "}
+          <code className="text-xs">ARK_BASE_URL</code>、<code className="text-xs">ARK_IMAGE_MODEL</code> 调整。
         </div>
       ) : null}
 

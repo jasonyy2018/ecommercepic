@@ -40,6 +40,15 @@ services:
       CLOUDFLARE_WORKER_SECRET: ${CLOUDFLARE_WORKER_SECRET:-}
       WORKER_URL: ${WORKER_URL:-}
       WORKER_SECRET: ${WORKER_SECRET:-}
+      # 火山方舟 Seedream（与 Worker 二选一或并存；默认优先 Worker，见 IMAGE_GENERATION_PROVIDER）
+      ARK_API_KEY: ${ARK_API_KEY:-}
+      ARK_BASE_URL: ${ARK_BASE_URL:-}
+      ARK_IMAGE_MODEL: ${ARK_IMAGE_MODEL:-}
+      ARK_IMAGE_SIZE: ${ARK_IMAGE_SIZE:-}
+      ARK_WATERMARK: ${ARK_WATERMARK:-}
+      IMAGE_GENERATION_PROVIDER: ${IMAGE_GENERATION_PROVIDER:-}
+      TEXT_LLM_PROVIDER: ${TEXT_LLM_PROVIDER:-}
+      ARK_TEXT_MODEL: ${ARK_TEXT_MODEL:-}
     volumes:
       - uploads:/data/uploads
     depends_on:

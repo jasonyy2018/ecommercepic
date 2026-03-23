@@ -1,7 +1,9 @@
 import path from "node:path";
 import fs from "node:fs/promises";
 import { prisma } from "@/lib/prisma";
+import { callArkSeedreamGenerate, isArkImageConfigured } from "@/lib/ark-seedream";
 import { callGenerateImageWorker, isWorkerConfigured } from "@/lib/cloudflare-worker";
+import { getImageBackendStatus } from "@/lib/image-generation-backend";
 import { makePublicFileUrl, makeUploadRelPath, UPLOAD_ROOT, writeFileAtomic } from "@/lib/uploads";
 
 /** 1×1 PNG，Worker 未配置且读源图失败时的兜底 */
@@ -23,7 +25,7 @@ export function relFromPublicFileUrl(imageUrl: string): string | null {
 }
 
 /**
- * 执行生成：读本地产品图 → 调 Cloudflare Worker（若已配置）→ 结果写入 UPLOAD_ROOT/generations/{id}/result.png
+ * 执行生成：读本地产品图 → 按策略调 Cloudflare Worker / 火山方舟 Seedream / 占位（源图副本）→ 写入 UPLOAD_ROOT/generations/{id}/result.png
  */
 export async function runGeneration(id: string) {
   const gen = await prisma.generation.findUnique({ where: { id } });
@@ -67,9 +69,38 @@ export async function runGeneration(id: string) {
   const ext = path.extname(absSource).toLowerCase();
   const mime = ext === ".png" ? "image/png" : "image/jpeg";
 
+  const provider = process.env.IMAGE_GENERATION_PROVIDER?.trim().toLowerCase();
+  if (provider === "ark" && !isArkImageConfigured()) {
+    return prisma.generation.update({
+      where: { id },
+      data: {
+        status: "failed",
+        errorMessage: "IMAGE_GENERATION_PROVIDER=ark 但未配置 ARK_API_KEY",
+      },
+    });
+  }
+  if ((provider === "cloudflare" || provider === "worker") && !isWorkerConfigured()) {
+    return prisma.generation.update({
+      where: { id },
+      data: {
+        status: "failed",
+        errorMessage: "IMAGE_GENERATION_PROVIDER=cloudflare 但未配置 CLOUDFLARE_WORKER_URL / WORKER_URL",
+      },
+    });
+  }
+
   try {
+    const { imageBackend } = getImageBackendStatus();
     let out: Buffer;
-    if (isWorkerConfigured()) {
+
+    if (imageBackend === "ark") {
+      out = await callArkSeedreamGenerate({
+        scene: gen.scene,
+        prompt: gen.prompt,
+        sourceImageBase64: imageBuffer.toString("base64"),
+        sourceMime: mime,
+      });
+    } else if (imageBackend === "cloudflare") {
       out = await callGenerateImageWorker({
         scene: gen.scene,
         prompt: gen.prompt,
@@ -77,7 +108,7 @@ export async function runGeneration(id: string) {
         sourceMime: mime,
       });
     } else {
-      // 未配置 Worker：用源图副本作为「联调占位」，便于验证存储与下载链路
+      // 未配置任何生图后端：用源图副本作为「联调占位」，便于验证存储与下载链路
       out = imageBuffer.length > 0 ? imageBuffer : TINY_PNG;
     }
 
