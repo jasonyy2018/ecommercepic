@@ -12,6 +12,7 @@ RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 FROM base AS deps
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY frontend/package.json ./frontend/
+COPY frontend/prisma ./frontend/prisma/
 COPY backend/package.json ./backend/
 RUN pnpm install --frozen-lockfile --filter frontend...
 
