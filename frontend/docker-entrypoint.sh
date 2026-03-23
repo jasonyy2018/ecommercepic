@@ -14,4 +14,15 @@ echo "[entrypoint] Running Prisma migrations..."
 su-exec nextjs prisma migrate deploy --schema=./prisma/schema.prisma
 
 echo "[entrypoint] starting Next.js..."
-exec su-exec nextjs node server.js
+if [ -f "./server.js" ]; then
+  exec su-exec nextjs node ./server.js
+fi
+
+if [ -f "./frontend/server.js" ]; then
+  # pnpm workspace + standalone 产物可能落在 /app/frontend/server.js
+  exec su-exec nextjs node ./frontend/server.js
+fi
+
+echo "[entrypoint] ERROR: server.js not found at ./server.js or ./frontend/server.js"
+ls -la .
+exit 1
