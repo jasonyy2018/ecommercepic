@@ -2,6 +2,8 @@
 
 全栈 **Next.js（App Router + API Routes）** + **PostgreSQL**，上传文件持久化到 **命名卷** `uploads`。
 
+**构建说明**：`docker-compose*.yml` 中应用镜像的 `build.context` 为**仓库根目录**，`dockerfile` 为 **`frontend/Dockerfile`**。镜像内使用 **pnpm** 安装依赖（`pnpm-lock.yaml` 在根目录），与本地 `pnpm install` 一致。
+
 ## 快速启动
 
 1. 在项目根目录创建环境文件：

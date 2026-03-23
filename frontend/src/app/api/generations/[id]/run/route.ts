@@ -17,7 +17,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     if (!exists) return NextResponse.json<ApiError>({ error: "not found" }, { status: 404 });
 
     const gen = await runGeneration(id);
-    const b = getImageBackendStatus();
+    const b = await getImageBackendStatus();
     return NextResponse.json({
       generation: gen,
       workerConfigured: b.workerConfigured,

@@ -2,7 +2,12 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -15,11 +20,11 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
-    "@prisma/client": "^6.16.0",
+    "@prisma/client": "6.19.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.577.0",
-    "next": "16.1.6",
+    "next": "16.2.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "shadcn": "^4.0.5",
@@ -28,13 +33,13 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.1.6",
-    "prisma": "^6.16.0",
+    "eslint-config-next": "16.2.1",
+    "prisma": "6.19.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5.9.0"
   }
 }

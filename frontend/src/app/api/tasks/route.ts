@@ -9,7 +9,7 @@ export async function GET() {
   const tasks = await prisma.task.findMany({
     orderBy: { createdAt: "desc" },
   });
-  const items = tasks.map((t) => ({
+  const items = tasks.map((t: (typeof tasks)[number]) => ({
     id: t.id,
     name: t.name,
     status: t.status,

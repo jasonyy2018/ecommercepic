@@ -21,7 +21,7 @@ export async function POST(req: Request) {
         return NextResponse.json<ApiError>(
           {
             error:
-              "当前使用火山方舟生成提示词：请配置环境变量 ARK_API_KEY，或在「系统设置」中填写文本 API Key（模型供应商）",
+              "当前使用火山方舟生成提示词：请配置 ARK_API_KEY，或在系统设置「文本 API Key / 生图专用 Key」任填其一",
           },
           { status: 400 },
         );

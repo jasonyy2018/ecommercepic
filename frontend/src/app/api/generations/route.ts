@@ -29,7 +29,7 @@ export async function GET(req: Request) {
         updatedAt: true,
       },
     });
-    const b = getImageBackendStatus();
+    const b = await getImageBackendStatus();
     return NextResponse.json({
       items,
       workerConfigured: b.workerConfigured,
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
         status: "pending",
       },
     });
-    const b = getImageBackendStatus();
+    const b = await getImageBackendStatus();
     return NextResponse.json({
       generation: gen,
       workerConfigured: b.workerConfigured,

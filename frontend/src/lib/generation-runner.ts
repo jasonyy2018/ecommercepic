@@ -1,7 +1,8 @@
 import path from "node:path";
 import fs from "node:fs/promises";
 import { prisma } from "@/lib/prisma";
-import { callArkSeedreamGenerate, isArkImageConfigured } from "@/lib/ark-seedream";
+import { callArkSeedreamGenerate } from "@/lib/ark-seedream";
+import { isArkImageConfiguredAsync } from "@/lib/ark-image-config";
 import { callGenerateImageWorker, isWorkerConfigured } from "@/lib/cloudflare-worker";
 import { getImageBackendStatus } from "@/lib/image-generation-backend";
 import { makePublicFileUrl, makeUploadRelPath, UPLOAD_ROOT, writeFileAtomic } from "@/lib/uploads";
@@ -70,12 +71,13 @@ export async function runGeneration(id: string) {
   const mime = ext === ".png" ? "image/png" : "image/jpeg";
 
   const provider = process.env.IMAGE_GENERATION_PROVIDER?.trim().toLowerCase();
-  if (provider === "ark" && !isArkImageConfigured()) {
+  if (provider === "ark" && !(await isArkImageConfiguredAsync())) {
     return prisma.generation.update({
       where: { id },
       data: {
         status: "failed",
-        errorMessage: "IMAGE_GENERATION_PROVIDER=ark 但未配置 ARK_API_KEY",
+        errorMessage:
+          "IMAGE_GENERATION_PROVIDER=ark 但未配置生图 Key（ARK_API_KEY 或系统设置中文本/生图 API Key）",
       },
     });
   }
@@ -90,7 +92,7 @@ export async function runGeneration(id: string) {
   }
 
   try {
-    const { imageBackend } = getImageBackendStatus();
+    const { imageBackend } = await getImageBackendStatus();
     let out: Buffer;
 
     if (imageBackend === "ark") {

@@ -12,6 +12,9 @@ export default function SettingsPage() {
     arkBaseUrl: "",
     textModelKey: "",
     imageModelKey: "",
+    arkImageModel: "doubao-seedream-5-0-260128",
+    arkImageSize: "2K",
+    arkImageWatermark: "" as "" | "true",
     videoModelKey: "",
     uploadDir: "",
     maxConcurrency: "3",
@@ -74,46 +77,107 @@ export default function SettingsPage() {
     <div className="w-full h-full p-10 flex flex-col gap-8 bg-[var(--carpet-bg-soft)]">
       <PageHeader title="系统设置" />
 
-      <div className="grid grid-cols-2 gap-4">
-        <section className="carpet-card p-4">
-          <h3 className="font-space-grotesk text-base font-semibold text-[var(--carpet-text)]">模型供应商</h3>
-          <p className="mt-1 text-xs text-[var(--carpet-text-muted)]">
-            文案提示词（/create 生成脚本）：可选本地模板或火山方舟 Responses。环境变量{" "}
-            <code className="text-[10px]">TEXT_LLM_PROVIDER</code>、<code className="text-[10px]">ARK_API_KEY</code>、
-            <code className="text-[10px]">ARK_TEXT_MODEL</code> 优先于本页。
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <section className="carpet-card p-4 md:col-span-2">
+          <h3 className="font-space-grotesk text-base font-semibold text-[var(--carpet-text)]">模型供应商（语言 + 生图）</h3>
+          <p className="mt-2 text-xs text-[var(--carpet-text-muted)] leading-relaxed">
+            <strong>火山方舟</strong>：环境变量 <code className="text-[10px]">ARK_API_KEY</code>、
+            <code className="text-[10px]">ARK_BASE_URL</code>、<code className="text-[10px]">ARK_TEXT_MODEL</code>、
+            <code className="text-[10px]">ARK_IMAGE_MODEL</code> 等<strong>优先于本页</strong>。仅填一处 Key 即可文图共用：填「文本
+            API Key」后，生图会沿用；若文案与生图 Key 不同，再填「生图专用 API Key」。
+            <br />
+            <strong>Cloudflare 生图</strong>：在环境变量配置 <code className="text-[10px]">CLOUDFLARE_WORKER_URL</code>（或{" "}
+            <code className="text-[10px]">WORKER_URL</code>）；与 Ark 同时存在时默认优先 Worker，强制 Ark 请设{" "}
+            <code className="text-[10px]">IMAGE_GENERATION_PROVIDER=ark</code>。
           </p>
-          <div className="mt-3 space-y-2">
-            <label className="block text-xs text-[var(--carpet-text-muted)]">文案 / 提示词来源</label>
-            <select
-              className="w-full carpet-input"
-              value={form.textLlmProvider}
-              onChange={(e) => patch("textLlmProvider", e.target.value as "template" | "ark")}
-            >
-              <option value="template">本地规则模板（不消耗 API）</option>
-              <option value="ark">火山方舟（Doubao，Responses API）</option>
-            </select>
+
+          <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-2 rounded-md border border-[var(--carpet-border)] p-3 bg-[var(--carpet-bg-soft)]">
+              <h4 className="font-space-grotesk text-sm font-semibold text-[var(--carpet-text)]">
+                语言模型 · 提示词（/create）
+              </h4>
+              <p className="text-[11px] text-[var(--carpet-text-muted)]">
+                <code className="text-[10px]">TEXT_LLM_PROVIDER=ark</code> 可强制走方舟（覆盖本页「模板」选项）。
+              </p>
+              <label className="block text-xs text-[var(--carpet-text-muted)]">文案来源</label>
+              <select
+                className="w-full carpet-input"
+                value={form.textLlmProvider}
+                onChange={(e) => patch("textLlmProvider", e.target.value as "template" | "ark")}
+              >
+                <option value="template">本地规则模板（不消耗 API）</option>
+                <option value="ark">火山方舟 Responses API</option>
+              </select>
+              <input
+                className="w-full carpet-input text-sm"
+                placeholder="文本模型端点 ID（如 doubao-seed-2-0-lite-260215）"
+                value={form.arkTextModel}
+                onChange={(e) => patch("arkTextModel", e.target.value)}
+              />
+              <input
+                className="w-full carpet-input text-sm"
+                placeholder="Ark Base URL（可选，默认同下与生图共用）"
+                value={form.arkBaseUrl}
+                onChange={(e) => patch("arkBaseUrl", e.target.value)}
+              />
+              <input
+                className="w-full carpet-input text-sm"
+                placeholder="文本 API Key（与 ARK_API_KEY 二选一）"
+                value={form.textModelKey}
+                onChange={(e) => patch("textModelKey", e.target.value)}
+                type="password"
+                autoComplete="off"
+              />
+            </div>
+
+            <div className="space-y-2 rounded-md border border-[var(--carpet-border)] p-3 bg-[var(--carpet-bg-soft)]">
+              <h4 className="font-space-grotesk text-sm font-semibold text-[var(--carpet-text)]">
+                生图 · Seedream（/generate）
+              </h4>
+              <p className="text-[11px] text-[var(--carpet-text-muted)]">
+                走 Ark 生图时需 Key + 模型 ID；未填「生图专用 Key」时使用上方文本 Key 或{" "}
+                <code className="text-[10px]">ARK_API_KEY</code>。
+              </p>
+              <input
+                className="w-full carpet-input text-sm"
+                placeholder="生图模型端点 ID（如 doubao-seedream-5-0-260128）"
+                value={form.arkImageModel}
+                onChange={(e) => patch("arkImageModel", e.target.value)}
+              />
+              <input
+                className="w-full carpet-input text-sm"
+                placeholder="输出尺寸（如 1K、2K、4K；环境变量 ARK_IMAGE_SIZE 优先）"
+                value={form.arkImageSize}
+                onChange={(e) => patch("arkImageSize", e.target.value)}
+              />
+              <label className="block text-xs text-[var(--carpet-text-muted)]">生图水印</label>
+              <select
+                className="w-full carpet-input"
+                value={form.arkImageWatermark}
+                onChange={(e) => patch("arkImageWatermark", e.target.value as "" | "true")}
+              >
+                <option value="">否（默认，ARK_WATERMARK 环境变量优先）</option>
+                <option value="true">是</option>
+              </select>
+              <input
+                className="w-full carpet-input text-sm"
+                placeholder="生图专用 API Key（可选，与文本 Key 不同时填写）"
+                value={form.imageModelKey}
+                onChange={(e) => patch("imageModelKey", e.target.value)}
+                type="password"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-[var(--carpet-border)]">
+            <label className="block text-xs text-[var(--carpet-text-muted)] mb-1">Video API Key（预留，当前流程未使用）</label>
             <input
-              className="w-full carpet-input"
-              placeholder="Ark 文本模型端点 ID（如 doubao-seed-2-0-lite-260215）"
-              value={form.arkTextModel}
-              onChange={(e) => patch("arkTextModel", e.target.value)}
+              className="w-full max-w-xl carpet-input text-sm"
+              placeholder="Video Model API Key（可选）"
+              value={form.videoModelKey}
+              onChange={(e) => patch("videoModelKey", e.target.value)}
             />
-            <input
-              className="w-full carpet-input"
-              placeholder="Ark Base URL（可选，默认 https://ark.cn-beijing.volces.com/api/v3）"
-              value={form.arkBaseUrl}
-              onChange={(e) => patch("arkBaseUrl", e.target.value)}
-            />
-            <input
-              className="w-full carpet-input"
-              placeholder="文本 API Key（Ark，与 ARK_API_KEY 二选一；生产建议用环境变量）"
-              value={form.textModelKey}
-              onChange={(e) => patch("textModelKey", e.target.value)}
-              type="password"
-              autoComplete="off"
-            />
-            <input className="w-full carpet-input" placeholder="Image Model API Key" value={form.imageModelKey} onChange={(e) => patch("imageModelKey", e.target.value)} />
-            <input className="w-full carpet-input" placeholder="Video Model API Key（可选）" value={form.videoModelKey} onChange={(e) => patch("videoModelKey", e.target.value)} />
           </div>
         </section>
 

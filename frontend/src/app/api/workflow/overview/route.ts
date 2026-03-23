@@ -20,13 +20,17 @@ export async function GET() {
     const avgProgress =
       latest.length > 0
         ? Math.round(
-            latest.reduce((acc, t) => acc + (t.totalCount > 0 ? t.finishedCount / t.totalCount : 0), 0) /
+            latest.reduce(
+              (acc: number, t: (typeof latest)[number]) =>
+                acc + (t.totalCount > 0 ? t.finishedCount / t.totalCount : 0),
+              0,
+            ) /
               latest.length *
               100
           )
         : 0;
 
-    const queue = latest.map((t) => ({
+    const queue = latest.map((t: (typeof latest)[number]) => ({
       id: t.id,
       name: t.name,
       status: t.status,
@@ -35,7 +39,7 @@ export async function GET() {
       updatedAt: t.updatedAt.toISOString(),
     }));
 
-    const timeline = latest.slice(0, 5).map((t) => ({
+    const timeline = latest.slice(0, 5).map((t: (typeof latest)[number]) => ({
       at: t.updatedAt.toISOString(),
       text: `${t.name}｜${t.status}｜${t.finishedCount}/${t.totalCount}`,
     }));

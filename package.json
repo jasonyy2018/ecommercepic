@@ -1,0 +1,21 @@
+{
+  "name": "ecommercepic",
+  "private": true,
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@10.15.1",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "sharp",
+      "esbuild",
+      "unrs-resolver"
+    ]
+  },
+  "scripts": {
+    "dev": "pnpm --filter frontend dev",
+    "build": "pnpm --filter frontend build",
+    "lint": "pnpm --filter frontend lint"
+  }
+}

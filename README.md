@@ -2,6 +2,8 @@
 
 地毯行业 **AI 出图** 全栈应用（Next.js + PostgreSQL）。
 
+> **许可**：本仓库为**非开源专有软件**，详见根目录 **[LICENSE](./LICENSE)**。未获书面授权不得复制、分发或用于商业用途。
+
 ## Docker 一键部署
 
 ```bash
@@ -40,15 +42,24 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 
 生产部署默认使用 Caddy 反向代理 + HTTPS（Let's Encrypt）。
 
-## 本地开发（前端）
+## 包管理与本地开发
+
+使用 **pnpm**（Node 20+，建议先执行 `corepack enable` 启用自带 pnpm）。
 
 ```bash
+# 仓库根目录：安装 workspace（frontend + backend）
+pnpm install
+
+# 仅跑前端
+pnpm --filter frontend dev
+
+# 或进入 frontend
 cd frontend
-npm install
-# 配置 .env 中 DATABASE_URL
-npm run db:migrate:deploy
-npm run dev
+pnpm run db:migrate:deploy
+pnpm dev
 ```
+
+Docker 构建已改为：**context = 项目根目录**，`frontend/Dockerfile` 内用 `pnpm install --filter frontend...`，需提交根目录 **`pnpm-lock.yaml`**。
 
 Cloudflare Worker 与 `WORKER_SECRET` 配置见 **[docs/CLOUDFLARE.md](./docs/CLOUDFLARE.md)**（勿把 `cfut_` API Token 与 Bearer 密钥混用）。
 

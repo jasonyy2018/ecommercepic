@@ -1,0 +1,35 @@
+# 专有软件许可 / PROPRIETARY SOFTWARE LICENSE
+
+**本软件为非开源专有软件。未经权利人书面授权，不得使用、复制或分发。**
+
+---
+
+Copyright © 2026 权利人保留所有权利。  
+Copyright © 2026 [权利人名称或公司全称]. All Rights Reserved.
+
+## 中文摘要
+
+1. 本仓库内的源代码、文档、配置及生成物（统称「本软件」）的著作权及其他知识产权归权利人所有。  
+2. **未获权利人事先书面许可**，任何个人或组织不得：  
+   - 复制、修改、合并、发布、传播、再许可、出售本软件或其衍生作品；  
+   - 将本软件用于商业目的或向第三方提供基于本软件的服务（另有书面协议除外）。  
+3. 权利人未通过本文件授予任何明示或默示的专利、商标或其他权利。  
+4. 本软件按「现状」提供，**不提供任何明示或默示担保**（包括但不限于适销性、特定用途适用性、不侵权）。  
+5. 授权范围、费用、技术支持等，以双方另行签署的**书面商业许可协议**为准。
+
+请将上文 `[权利人名称或公司全称]` 替换为您的法定名称，并视需要填写联系邮箱/地址。
+
+---
+
+## English (for reference)
+
+The Software (source code, documentation, and related materials in this repository) is **proprietary and confidential**.  
+
+**No license is granted** to use, copy, modify, merge, publish, distribute, sublicense, or sell copies of the Software, except pursuant to a **separate written agreement** with the copyright holder.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+
+Replace `[权利人名称或公司全称]` with your legal entity name. For licensing inquiries, provide your contact details below:
+
+- Licensing contact: ____________________
+- Email: ____________________

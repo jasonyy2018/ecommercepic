@@ -56,7 +56,7 @@ export async function POST(req: Request) {
         return NextResponse.json<ApiError>(
           {
             error:
-              "当前使用火山方舟：请配置 ARK_API_KEY 或在设置页填写文本 API Key",
+              "当前使用火山方舟：请配置 ARK_API_KEY，或在设置页填写文本/生图 API Key 任其一",
           },
           { status: 400 },
         );

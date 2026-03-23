@@ -1,56 +1,42 @@
 /**
  * 火山方舟 Ark — Doubao Seedream 图像生成（OpenAI 兼容 HTTP）
  *
- * 环境变量：
- *   ARK_API_KEY（必填）
- *   ARK_BASE_URL（可选，默认 https://ark.cn-beijing.volces.com/api/v3）
- *   ARK_IMAGE_MODEL（可选，默认 doubao-seedream-5-0-260128）
- *   ARK_IMAGE_SIZE（可选，默认 2K）
- *   ARK_WATERMARK=true 时打水印（默认 false）
- *
- * 参考图：使用 data URL（与官方示例的 HTTPS URL 二选一），把本地产品图一并传给模型。
+ * 配置来源见 `ark-image-config.ts`（环境变量 + 系统设置）。
+ * 参考图：data URL，把本地产品图一并传给模型。
  */
 
 import type { WorkerGeneratePayload } from "@/lib/cloudflare-worker";
-
-export function isArkImageConfigured(): boolean {
-  return Boolean(process.env.ARK_API_KEY?.trim());
-}
+import { resolveArkImageConfig } from "@/lib/ark-image-config";
 
 function combinedPrompt(payload: WorkerGeneratePayload): string {
   return `【场景: ${payload.scene}】\n${payload.prompt}\n\n请严格参考所给产品图，保持产品外观、包装与标识清晰可辨，生成适合电商详情页与广告投放的主图。`;
 }
 
 export async function callArkSeedreamGenerate(payload: WorkerGeneratePayload): Promise<Buffer> {
-  const apiKey = process.env.ARK_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error("请配置环境变量 ARK_API_KEY（火山方舟 API Key）");
+  const cfg = await resolveArkImageConfig();
+  if (!cfg.apiKey) {
+    throw new Error(
+      "未配置火山方舟生图 Key：请设置环境变量 ARK_API_KEY，或在系统设置填写「文本 API Key」或「生图 API Key」",
+    );
   }
-
-  const baseUrl = (process.env.ARK_BASE_URL?.trim() || "https://ark.cn-beijing.volces.com/api/v3").replace(
-    /\/$/,
-    "",
-  );
-  const model = process.env.ARK_IMAGE_MODEL?.trim() || "doubao-seedream-5-0-260128";
-  const size = process.env.ARK_IMAGE_SIZE?.trim() || "2K";
 
   const imageRef = `data:${payload.sourceMime};base64,${payload.sourceImageBase64}`;
 
   const body: Record<string, unknown> = {
-    model,
+    model: cfg.model,
     prompt: combinedPrompt(payload),
-    size,
+    size: cfg.size,
     response_format: "b64_json",
     image: imageRef,
-    watermark: process.env.ARK_WATERMARK === "true",
+    watermark: cfg.watermark,
     sequential_image_generation: "disabled",
   };
 
-  const res = await fetch(`${baseUrl}/images/generations`, {
+  const res = await fetch(`${cfg.baseUrl}/images/generations`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${cfg.apiKey}`,
     },
     body: JSON.stringify(body),
   });

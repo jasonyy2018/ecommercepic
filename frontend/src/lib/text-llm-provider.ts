@@ -3,7 +3,7 @@ import { getAppSettings, type TextLlmProvider } from "@/lib/app-settings";
 /**
  * 文案模型供应商解析顺序：
  * - TEXT_LLM_PROVIDER 环境变量（ark | template）优先于设置文件
- * - API Key：ARK_API_KEY 优先于设置页「文本 API Key」
+ * - API Key：ARK_API_KEY → 文本 API Key → 生图专用 Key（三选一即可让文案走 Ark）
  * - 模型 ID：ARK_TEXT_MODEL 优先于设置页「Ark 文本模型 ID」
  * - Base URL：ARK_BASE_URL 优先于设置页「Ark API Base URL」
  */
@@ -22,7 +22,11 @@ export async function resolveTextLlmConfig(): Promise<{
     provider = settings.textLlmProvider === "ark" ? "ark" : "template";
   }
 
-  const apiKey = process.env.ARK_API_KEY?.trim() || settings.textModelKey?.trim() || "";
+  const apiKey =
+    process.env.ARK_API_KEY?.trim() ||
+    settings.textModelKey?.trim() ||
+    settings.imageModelKey?.trim() ||
+    "";
   const model =
     process.env.ARK_TEXT_MODEL?.trim() ||
     settings.arkTextModel?.trim() ||

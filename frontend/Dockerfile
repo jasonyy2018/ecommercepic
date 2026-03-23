@@ -1,27 +1,33 @@
 # syntax=docker/dockerfile:1
-# Next.js 全栈生产镜像（standalone）+ 启动时 prisma migrate deploy
+# Next.js 生产镜像（standalone）+ pnpm workspace（构建 context = 仓库根目录）
+# 用法：docker compose 中 context: . dockerfile: frontend/Dockerfile
 
 FROM node:22-alpine AS base
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 
-# ---------- 依赖 ----------
+# ---------- 依赖（仅安装 frontend 及其依赖） ----------
 FROM base AS deps
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY frontend/package.json ./frontend/
+COPY backend/package.json ./backend/
+RUN pnpm install --frozen-lockfile --filter frontend...
 
 # ---------- 构建 ----------
 FROM base AS builder
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY --from=deps /app /app
+WORKDIR /app
+COPY frontend ./frontend
 
+WORKDIR /app/frontend
 ENV NEXT_TELEMETRY_DISABLED=1
-# prisma generate 不连库，占位即可满足 schema 解析
 ARG DATABASE_URL="postgresql://user:pass@localhost:5432/db?schema=public"
 ENV DATABASE_URL=$DATABASE_URL
 
-RUN npx prisma generate
-RUN npm run build
+RUN pnpm exec prisma generate
+RUN pnpm run build
 
 # ---------- 运行 ----------
 FROM base AS runner
@@ -31,22 +37,19 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
-# entrypoint 先以 root 修正 UPLOAD_DIR 权限，再 su-exec 到 nextjs
 RUN apk add --no-cache su-exec
 
-# 与 package.json 中 @prisma/client 主版本对齐，用于 migrate deploy
-RUN npm install -g prisma@6.16.0
+# 与 frontend/package.json 中 prisma 版本一致
+RUN npm install -g prisma@6.19.2
 
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/frontend/prisma ./prisma
+COPY --from=builder /app/frontend/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/static ./.next/static
 
-COPY --chown=nextjs:nodejs docker-entrypoint.sh ./
-# Windows 检出时可能为 CRLF，避免 shebang 解析失败
+COPY --chown=nextjs:nodejs frontend/docker-entrypoint.sh ./
 RUN sed -i 's/\r$//' docker-entrypoint.sh && chmod +x docker-entrypoint.sh
 
-# 由 entrypoint 修正卷权限后以 nextjs 运行（勿在此 USER nextjs，否则无法 chown /data/uploads）
 USER root
 
 EXPOSE 3000

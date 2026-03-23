@@ -2,18 +2,18 @@
  * 生图后端选择：Cloudflare Worker / 火山方舟 Seedream / 占位（源图副本）
  */
 
-import { isArkImageConfigured } from "@/lib/ark-seedream";
+import { isArkImageConfiguredAsync } from "@/lib/ark-image-config";
 import { isWorkerConfigured } from "@/lib/cloudflare-worker";
 
 export type ImageBackendId = "ark" | "cloudflare" | "placeholder";
 
-export function getImageBackendStatus(): {
+export async function getImageBackendStatus(): Promise<{
   workerConfigured: boolean;
   arkConfigured: boolean;
   imageBackend: ImageBackendId;
-} {
+}> {
   const workerConfigured = isWorkerConfigured();
-  const arkConfigured = isArkImageConfigured();
+  const arkConfigured = await isArkImageConfiguredAsync();
   const p = process.env.IMAGE_GENERATION_PROVIDER?.trim().toLowerCase();
 
   let imageBackend: ImageBackendId;

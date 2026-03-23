@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     ]);
 
     const rows = [
-      ...uploads.map((u) => ({
+      ...uploads.map((u: (typeof uploads)[number]) => ({
         id: `upload_${u.id}`,
         kind: "UPLOAD",
         type: u.type,
@@ -34,7 +34,7 @@ export async function GET(req: Request) {
         productName: u.task.productName,
         createdAt: u.createdAt.toISOString(),
       })),
-      ...generated.map((g) => ({
+      ...generated.map((g: (typeof generated)[number]) => ({
         id: `generated_${g.id}`,
         kind: "GENERATED",
         type: g.aspectRatio,

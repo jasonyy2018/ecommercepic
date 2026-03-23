@@ -23,8 +23,8 @@ services:
 
   app:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
       args:
         DATABASE_URL: postgresql://ecommercepic:ecommercepic_change_me@db:5432/ecommercepic?schema=public
     image: ecommercepic-app:latest

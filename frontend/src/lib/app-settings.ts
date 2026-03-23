@@ -11,9 +11,16 @@ export type AppSettings = {
   arkTextModel: string;
   /** 可选，留空则用默认北京 endpoint */
   arkBaseUrl: string;
-  /** 在 textLlmProvider=ark 时作为 API Key（生产建议用环境变量 ARK_API_KEY） */
+  /** 火山方舟 API Key（文案；生图未单独填 imageModelKey 时与生图共用） */
   textModelKey: string;
+  /** 生图专用 Key（可选；不填则用 textModelKey / 环境变量 ARK_API_KEY） */
   imageModelKey: string;
+  /** Seedream 等生图模型端点 ID */
+  arkImageModel: string;
+  /** 如 1K / 2K / 4K */
+  arkImageSize: string;
+  /** 设为 true 时打水印 */
+  arkImageWatermark: string;
   videoModelKey: string;
   uploadDir: string;
   maxConcurrency: string;
@@ -28,6 +35,9 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   arkBaseUrl: "",
   textModelKey: "",
   imageModelKey: "",
+  arkImageModel: "",
+  arkImageSize: "",
+  arkImageWatermark: "",
   videoModelKey: "",
   uploadDir: "",
   maxConcurrency: "3",

@@ -2,16 +2,11 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+本仓库前端为 **pnpm workspace** 子包：请在**项目根**执行 `pnpm install`，再：
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm --filter frontend dev
+# 或 cd frontend && pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
@@ -32,13 +27,13 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 2. 应用已有迁移（仓库已含 `prisma/migrations`）：
 
 ```bash
-npm run db:migrate:deploy
+pnpm run db:migrate:deploy
 ```
 
    本地开发若需改 schema 并生成新迁移：
 
 ```bash
-npm run db:migrate -- --name your_change_name
+pnpm run db:migrate -- --name your_change_name
 ```
 
 3. (Optional) Open Prisma Studio to inspect data:
