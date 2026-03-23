@@ -52,7 +52,22 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   watermark: "",
 };
 
-export const SETTINGS_FILE = path.join(process.cwd(), ".data", "settings.json");
+const explicitSettingsFile = process.env.APP_SETTINGS_FILE?.trim();
+const uploadDir = process.env.UPLOAD_DIR?.trim();
+const defaultSettingsDir = uploadDir
+  ? path.join(uploadDir, ".app-settings")
+  : path.join(process.cwd(), ".data");
+
+/**
+ * 优先级：
+ * 1) APP_SETTINGS_FILE（显式指定）
+ * 2) UPLOAD_DIR/.app-settings/settings.json（Docker 挂卷可持久化）
+ * 3) {cwd}/.data/settings.json（本地开发默认）
+ */
+export const SETTINGS_FILE =
+  explicitSettingsFile && explicitSettingsFile.length > 0
+    ? explicitSettingsFile
+    : path.join(defaultSettingsDir, "settings.json");
 
 export async function getAppSettings(): Promise<AppSettings> {
   const raw = await readJsonFile<Partial<AppSettings>>(SETTINGS_FILE, {});
