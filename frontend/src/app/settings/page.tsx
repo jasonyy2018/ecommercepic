@@ -15,6 +15,7 @@ export default function SettingsPage() {
     arkImageModel: "doubao-seedream-5-0-260128",
     arkImageSize: "2K",
     arkImageWatermark: "" as "" | "true",
+    imageGenerationProvider: "auto" as "auto" | "ark" | "cloudflare",
     videoModelKey: "",
     uploadDir: "",
     maxConcurrency: "3",
@@ -87,9 +88,28 @@ export default function SettingsPage() {
             API Key」后，生图会沿用；若文案与生图 Key 不同，再填「生图专用 API Key」。
             <br />
             <strong>Cloudflare 生图</strong>：在环境变量配置 <code className="text-[10px]">CLOUDFLARE_WORKER_URL</code>（或{" "}
-            <code className="text-[10px]">WORKER_URL</code>）；与 Ark 同时存在时默认优先 Worker，强制 Ark 请设{" "}
-            <code className="text-[10px]">IMAGE_GENERATION_PROVIDER=ark</code>。
+            <code className="text-[10px]">WORKER_URL</code>）；与 Ark 同时存在且本页选「自动」时，会<strong>优先 Worker</strong>。
+            要走方舟可在下方选「强制火山方舟」，或设环境变量{" "}
+            <code className="text-[10px]">IMAGE_GENERATION_PROVIDER=ark</code>（环境变量优先于界面）。
           </p>
+
+          <div className="mt-4 max-w-xl space-y-2">
+            <label className="block text-xs text-[var(--carpet-text-muted)]">生图后端（/generate）</label>
+            <select
+              className="w-full carpet-input"
+              value={form.imageGenerationProvider}
+              onChange={(e) =>
+                patch("imageGenerationProvider", e.target.value as "auto" | "ark" | "cloudflare")
+              }
+            >
+              <option value="auto">自动：已配 Worker URL 时优先 Cloudflare，否则 Ark</option>
+              <option value="ark">强制火山方舟 Seedream</option>
+              <option value="cloudflare">强制 Cloudflare Worker</option>
+            </select>
+            <p className="text-[11px] text-[var(--carpet-text-muted)]">
+              若需全局覆盖（含 Docker），仍可使用 <code className="text-[10px]">IMAGE_GENERATION_PROVIDER</code>。
+            </p>
+          </div>
 
           <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-2 rounded-md border border-[var(--carpet-border)] p-3 bg-[var(--carpet-bg-soft)]">

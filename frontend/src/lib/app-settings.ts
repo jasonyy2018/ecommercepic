@@ -4,6 +4,9 @@ import { readJsonFile } from "@/lib/json-store";
 /** 与「模型供应商」设置页、`.data/settings.json` 一致 */
 export type TextLlmProvider = "template" | "ark";
 
+/** /generate 生图：自动规则 vs 强制某一路（环境变量 IMAGE_GENERATION_PROVIDER 仍优先） */
+export type ImageGenerationProviderSetting = "auto" | "ark" | "cloudflare";
+
 export type AppSettings = {
   /** 文案/提示词：本地模板 或 火山方舟 Responses API */
   textLlmProvider: TextLlmProvider;
@@ -21,6 +24,8 @@ export type AppSettings = {
   arkImageSize: string;
   /** 设为 true 时打水印 */
   arkImageWatermark: string;
+  /** 生图走 Ark 还是 Cloudflare；auto 时若 .env 仍配了 WORKER_URL 会优先 Worker */
+  imageGenerationProvider: ImageGenerationProviderSetting;
   videoModelKey: string;
   uploadDir: string;
   maxConcurrency: string;
@@ -38,6 +43,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   arkImageModel: "",
   arkImageSize: "",
   arkImageWatermark: "",
+  imageGenerationProvider: "auto",
   videoModelKey: "",
   uploadDir: "",
   maxConcurrency: "3",

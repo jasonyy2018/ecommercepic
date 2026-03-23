@@ -203,8 +203,9 @@ export default function GeneratePage() {
           </p>
           <ul className="list-disc pl-5 space-y-1">
             <li>
-              <strong>火山方舟 Seedream</strong>：配置 <code className="text-xs">ARK_API_KEY</code>，可选{" "}
-              <code className="text-xs">IMAGE_GENERATION_PROVIDER=ark</code>（同时配了 Worker 时强制用 Ark）。
+              <strong>火山方舟 Seedream</strong>：配置 <code className="text-xs">ARK_API_KEY</code>（或在系统设置填 Key）；若同时配了 Worker，请在{" "}
+              <strong>系统设置 → 生图后端</strong> 选「强制火山方舟」，或设{" "}
+              <code className="text-xs">IMAGE_GENERATION_PROVIDER=ark</code>。
             </li>
             <li>
               <strong>Cloudflare Worker</strong>：配置 <code className="text-xs">CLOUDFLARE_WORKER_URL</code> 或{" "}

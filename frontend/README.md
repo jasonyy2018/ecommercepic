@@ -15,7 +15,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 - 页面：**`/generate`** — 上传产品图 → 选场景 → 生成 → 下载；历史记录在页内。
 - API：`/api/generations`、`/api/generations/[id]/run`；结果写入 `UPLOAD_DIR/generations/<id>/result.png`。
-- 可选生图：`CLOUDFLARE_WORKER_URL` / `WORKER_URL`（Worker），或 `ARK_API_KEY`（火山方舟 Seedream，见项目根 `docs/ARK_SEEDREAM.md`）；`IMAGE_GENERATION_PROVIDER=ark|cloudflare` 可强制选用其一。
+- 可选生图：`CLOUDFLARE_WORKER_URL` / `WORKER_URL`（Worker），或 `ARK_API_KEY`（火山方舟 Seedream，见项目根 `docs/ARK_SEEDREAM.md`）；系统设置里可选「生图后端」，环境变量 `IMAGE_GENERATION_PROVIDER=ark|cloudflare` 优先于界面。
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

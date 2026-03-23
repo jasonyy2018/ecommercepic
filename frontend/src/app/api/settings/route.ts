@@ -15,6 +15,10 @@ export async function PUT(req: Request) {
   const body = (await req.json()) as Partial<AppSettings>;
   const prev = await readJsonFile<AppSettings>(SETTINGS_FILE, DEFAULT_APP_SETTINGS);
   const merged: AppSettings = { ...DEFAULT_APP_SETTINGS, ...prev, ...body };
+  const igp = merged.imageGenerationProvider;
+  if (igp !== "auto" && igp !== "ark" && igp !== "cloudflare") {
+    merged.imageGenerationProvider = prev.imageGenerationProvider ?? "auto";
+  }
   await writeJsonFile(SETTINGS_FILE, merged);
   return NextResponse.json({ settings: merged });
 }

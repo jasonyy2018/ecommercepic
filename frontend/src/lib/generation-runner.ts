@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { callArkSeedreamGenerate } from "@/lib/ark-seedream";
 import { isArkImageConfiguredAsync } from "@/lib/ark-image-config";
 import { callGenerateImageWorker, isWorkerConfigured } from "@/lib/cloudflare-worker";
-import { getImageBackendStatus } from "@/lib/image-generation-backend";
+import { getImageBackendStatus, resolveImageProviderChoice } from "@/lib/image-generation-backend";
 import { makePublicFileUrl, makeUploadRelPath, UPLOAD_ROOT, writeFileAtomic } from "@/lib/uploads";
 
 /** 1×1 PNG，Worker 未配置且读源图失败时的兜底 */
@@ -70,23 +70,24 @@ export async function runGeneration(id: string) {
   const ext = path.extname(absSource).toLowerCase();
   const mime = ext === ".png" ? "image/png" : "image/jpeg";
 
-  const provider = process.env.IMAGE_GENERATION_PROVIDER?.trim().toLowerCase();
-  if (provider === "ark" && !(await isArkImageConfiguredAsync())) {
+  const { mode: imageMode } = await resolveImageProviderChoice();
+  if (imageMode === "ark" && !(await isArkImageConfiguredAsync())) {
     return prisma.generation.update({
       where: { id },
       data: {
         status: "failed",
         errorMessage:
-          "IMAGE_GENERATION_PROVIDER=ark 但未配置生图 Key（ARK_API_KEY 或系统设置中文本/生图 API Key）",
+          "当前选择火山方舟生图，但未配置 Key：请设 ARK_API_KEY，或在系统设置填写文本/生图 API Key；也可在设置中将「生图后端」改为自动或 Cloudflare。",
       },
     });
   }
-  if ((provider === "cloudflare" || provider === "worker") && !isWorkerConfigured()) {
+  if (imageMode === "cloudflare" && !isWorkerConfigured()) {
     return prisma.generation.update({
       where: { id },
       data: {
         status: "failed",
-        errorMessage: "IMAGE_GENERATION_PROVIDER=cloudflare 但未配置 CLOUDFLARE_WORKER_URL / WORKER_URL",
+        errorMessage:
+          "当前选择 Cloudflare Worker 生图，但未配置 CLOUDFLARE_WORKER_URL / WORKER_URL；或在系统设置将「生图后端」改为自动或火山方舟。",
       },
     });
   }
