@@ -11,7 +11,7 @@ function makePrompt(i: number, type: PromptType, title: string, text: string): P
   };
 }
 
-const DEFAULT_SCENES_BUSINESS = ["户外商铺门口", "公司门口", "企业前台", "电梯间", "室内门口", "玄关口"];
+const DEFAULT_SCENES_BUSINESS = ["沿街店铺双开玻璃门门口", "公司门厅双开门", "企业前台入口", "高端商场店门口", "写字楼底商门口", "品牌门店玄关入口"];
 const DEFAULT_SCENES_HOME = ["玄关", "入户门口"];
 
 export type PromptGenerateBody = {
@@ -35,21 +35,31 @@ export function buildTemplatePrompts(body: PromptGenerateBody): PromptItem[] {
 
   const sceneList = [...scenesBusiness.map((s) => ({ group: "商用", s })), ...scenesHome.map((s) => ({ group: "家用", s }))];
   const scenePrompts: PromptItem[] = [];
+  const sceneCameraVariants = [
+    "camera: ultra-wide 20mm, eye-level flat shot, natural perspective",
+    "camera: ultra-wide 24mm, slight top-down angle, storefront-centered composition",
+    "camera: 22mm, frontal wide shot, doorway symmetry and depth",
+    "camera: 24mm, low-to-mid viewpoint, emphasize entrance floor area",
+  ] as const;
   for (let i = 0; i < 17; i++) {
     const pick = sceneList[i % sceneList.length];
     const title = `${pick.group}场景｜${pick.s}`;
     const sell = sellingPoints.slice(0, 3).join("，");
+    const camera = sceneCameraVariants[i % sceneCameraVariants.length];
     const base = [
       `${productName}，${category}`,
       `scene: ${pick.s}`,
       targetAudience ? `target audience: ${targetAudience}` : "",
       body.modelProfile ? `model: ${body.modelProfile}` : "",
       sell ? `key selling points: ${sell}` : "",
-      "composition: wide shot to medium shot, clean environment",
-      "lighting: soft natural light, realistic shadows",
-      "camera: 35mm, f/2.8, shallow depth of field",
-      "keep carpet material and color consistent, logo sharp and accurate",
-      "high detail, commercial product photography",
+      "subject: custom commercial logo doormat placed at storefront double glass door entrance, mat edge tightly aligned to threshold",
+      "layout: large mat coverage, balanced width-length ratio (not thin strip), clean tiled floor, high-end storefront with signage text and brand logo",
+      "environment: bustling premium office-street retail block, plants on both sides of door, promotional standees near entrance",
+      "lighting: daytime, natural sunlight with diagonal incidence, realistic indoor warm ambient lights, spacious and upscale interior visible",
+      camera,
+      "quality: 2K ultra clear, photorealistic, commercial advertising key visual for ecommerce paid ads",
+      "strict edit: complete cutout from original background before compositing, preserve material/color/texture/fibers/logo exactly, no blur/no ghost shadow/no logo deformation",
+      "business value focus: highlight brand recognition at entrance and premium marketing value of commercial ad doormat",
     ]
       .filter(Boolean)
       .join(", ");
