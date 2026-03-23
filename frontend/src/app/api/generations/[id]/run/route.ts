@@ -23,6 +23,8 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
       workerConfigured: b.workerConfigured,
       arkConfigured: b.arkConfigured,
       imageBackend: b.imageBackend,
+      providerMode: b.providerMode,
+      providerSource: b.providerSource,
       devPlaceholder: b.imageBackend === "placeholder",
     });
   } catch (e) {

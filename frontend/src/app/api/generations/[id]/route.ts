@@ -18,6 +18,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       workerConfigured: b.workerConfigured,
       arkConfigured: b.arkConfigured,
       imageBackend: b.imageBackend,
+      providerMode: b.providerMode,
+      providerSource: b.providerSource,
     });
   } catch (e) {
     return toErrorResponse(e, "generations/[id]/GET");

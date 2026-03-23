@@ -47,6 +47,8 @@ export default function GeneratePage() {
   const [history, setHistory] = useState<GenRow[]>([]);
   /** null = 尚未从接口拉取 */
   const [imageBackend, setImageBackend] = useState<"ark" | "cloudflare" | "placeholder" | null>(null);
+  const [providerMode, setProviderMode] = useState<"ark" | "cloudflare" | "auto" | null>(null);
+  const [providerSource, setProviderSource] = useState<"env" | "settings" | "auto" | null>(null);
 
   const loadHistory = useCallback(async () => {
     try {
@@ -56,6 +58,8 @@ export default function GeneratePage() {
         items?: GenRow[];
         workerConfigured?: boolean;
         imageBackend?: string;
+        providerMode?: "ark" | "cloudflare" | "auto";
+        providerSource?: "env" | "settings" | "auto";
       }>(res);
       if (!res.ok) throw new Error(json?.error || "加载历史失败");
       setHistory(json.items ?? []);
@@ -63,6 +67,12 @@ export default function GeneratePage() {
         setImageBackend(json.imageBackend);
       } else if (typeof json.workerConfigured === "boolean") {
         setImageBackend(json.workerConfigured ? "cloudflare" : "placeholder");
+      }
+      if (json.providerMode === "ark" || json.providerMode === "cloudflare" || json.providerMode === "auto") {
+        setProviderMode(json.providerMode);
+      }
+      if (json.providerSource === "env" || json.providerSource === "settings" || json.providerSource === "auto") {
+        setProviderSource(json.providerSource);
       }
     } catch {
       /* 历史非阻塞 */
@@ -156,6 +166,8 @@ export default function GeneratePage() {
         generation?: { id: string };
         workerConfigured?: boolean;
         imageBackend?: string;
+        providerMode?: "ark" | "cloudflare" | "auto";
+        providerSource?: "env" | "settings" | "auto";
       }>(createRes);
       if (!createRes.ok) throw new Error(createJson?.error || "创建任务失败");
       if (
@@ -166,6 +178,20 @@ export default function GeneratePage() {
         setImageBackend(createJson.imageBackend);
       } else if (typeof createJson.workerConfigured === "boolean") {
         setImageBackend(createJson.workerConfigured ? "cloudflare" : "placeholder");
+      }
+      if (
+        createJson.providerMode === "ark" ||
+        createJson.providerMode === "cloudflare" ||
+        createJson.providerMode === "auto"
+      ) {
+        setProviderMode(createJson.providerMode);
+      }
+      if (
+        createJson.providerSource === "env" ||
+        createJson.providerSource === "settings" ||
+        createJson.providerSource === "auto"
+      ) {
+        setProviderSource(createJson.providerSource);
       }
       const id = createJson.generation?.id as string | undefined;
       if (!id) throw new Error("创建任务失败");
@@ -218,6 +244,23 @@ export default function GeneratePage() {
         <div className="rounded-[6px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
           当前生图后端：<strong>火山方舟 Seedream</strong>（产品图以参考图形式传入模型）。地域/模型可通过{" "}
           <code className="text-xs">ARK_BASE_URL</code>、<code className="text-xs">ARK_IMAGE_MODEL</code> 调整。
+        </div>
+      ) : null}
+      {imageBackend === "cloudflare" ? (
+        <div className="rounded-[6px] border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 space-y-1">
+          <p>
+            当前生图后端：<strong>Cloudflare Worker</strong>
+          </p>
+          {providerMode === "auto" ? (
+            <p>
+              原因：生图后端为<strong>自动</strong>，且已检测到 Worker URL，所以优先走 Worker。
+            </p>
+          ) : null}
+          {providerSource === "env" ? (
+            <p>
+              当前选择来源：<strong>环境变量</strong>（<code className="text-xs">IMAGE_GENERATION_PROVIDER</code>）会覆盖系统设置。
+            </p>
+          ) : null}
         </div>
       ) : null}
 

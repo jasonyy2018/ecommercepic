@@ -35,6 +35,8 @@ export async function GET(req: Request) {
       workerConfigured: b.workerConfigured,
       arkConfigured: b.arkConfigured,
       imageBackend: b.imageBackend,
+      providerMode: b.providerMode,
+      providerSource: b.providerSource,
     });
   } catch (e) {
     return toErrorResponse(e, "generations/GET");
@@ -86,6 +88,8 @@ export async function POST(req: Request) {
       workerConfigured: b.workerConfigured,
       arkConfigured: b.arkConfigured,
       imageBackend: b.imageBackend,
+      providerMode: b.providerMode,
+      providerSource: b.providerSource,
     });
   } catch (e) {
     return toErrorResponse(e, "generations/POST");
