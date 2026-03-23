@@ -47,6 +47,8 @@ COPY --from=builder /app/frontend/prisma ./prisma
 COPY --from=builder /app/frontend/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/static ./.next/static
+# 当 standalone 入口位于 /app/frontend/server.js 时，Next 会从 /app/frontend/.next/static 读取静态资源
+COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/static ./frontend/.next/static
 
 COPY --chown=nextjs:nodejs frontend/docker-entrypoint.sh ./
 RUN sed -i 's/\r$//' docker-entrypoint.sh && chmod +x docker-entrypoint.sh
