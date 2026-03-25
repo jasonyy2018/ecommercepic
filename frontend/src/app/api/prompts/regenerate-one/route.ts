@@ -53,13 +53,13 @@ export async function POST(req: Request) {
 
     if (cfg.provider === "ark") {
       if (!cfg.apiKey) {
-        return NextResponse.json<ApiError>(
-          {
-            error:
-              "当前使用火山方舟：请配置 ARK_API_KEY，或在设置页填写文本/生图 API Key 任其一",
-          },
-          { status: 400 },
-        );
+        const tpl = getTemplatePromptByIndex(productBody, index);
+        return NextResponse.json({
+          title: tpl.title,
+          text: tpl.text,
+          promptSource: "template" as const,
+          warning: "未配置 Ark API Key，已用本地模板替换本条。",
+        });
       }
 
       const ref =

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import type { ApiError } from "@/lib/types";
 import { toErrorResponse } from "@/lib/api-handle-error";
 import { buildTemplatePrompts, type PromptGenerateBody } from "@/lib/prompt-template";
 import { generatePromptsWithArk } from "@/lib/prompt-llm-ark";
@@ -18,13 +17,13 @@ export async function POST(req: Request) {
 
     if (cfg.provider === "ark") {
       if (!cfg.apiKey) {
-        return NextResponse.json<ApiError>(
-          {
-            error:
-              "当前使用火山方舟生成提示词：请配置 ARK_API_KEY，或在系统设置「文本 API Key / 生图专用 Key」任填其一",
-          },
-          { status: 400 },
-        );
+        const prompts = buildTemplatePrompts(body);
+        return NextResponse.json({
+          prompts,
+          promptSource: "template" as const,
+          warning:
+            "当前文案来源为「火山方舟」，但未检测到 API Key（ARK_API_KEY 或系统设置中文本/生图 Key）。已自动使用本地模板生成 26 条；配置 Key 后可改为方舟生成。",
+        });
       }
 
       const prompts = await generatePromptsWithArk({

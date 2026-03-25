@@ -5,6 +5,14 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/app/page-header";
 import { formatClientError, parseJsonResponse } from "@/lib/safe-json-response";
 
+type SettingsDiagnostic = {
+  settingsFile: string;
+  textLlmProviderEnv: string | null;
+  effectiveTextLlmProvider: "ark" | "template";
+  arkKeyConfigured: boolean;
+  arkKeySource: "env" | "textModelKey" | "imageModelKey" | "none";
+};
+
 export default function SettingsPage() {
   const [form, setForm] = useState({
     textLlmProvider: "template" as "template" | "ark",
@@ -25,15 +33,22 @@ export default function SettingsPage() {
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [diagnostic, setDiagnostic] = useState<SettingsDiagnostic | null>(null);
 
   const patch = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
   const load = async () => {
     try {
       const res = await fetch("/api/settings", { cache: "no-store" });
-      const json = await parseJsonResponse<{ settings?: Partial<typeof form> }>(res);
+      const json = await parseJsonResponse<{
+        settings?: Partial<typeof form>;
+        diagnostic?: SettingsDiagnostic;
+      }>(res);
       if (res.ok && json.settings) {
         setForm((p) => ({ ...p, ...json.settings }));
+      }
+      if (res.ok && json.diagnostic) {
+        setDiagnostic(json.diagnostic);
       }
     } catch {
       /* 设置页加载失败时保持默认表单 */
@@ -53,9 +68,10 @@ export default function SettingsPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(form),
       });
-      const json = await parseJsonResponse<{ error?: string }>(res);
+      const json = await parseJsonResponse<{ error?: string; diagnostic?: SettingsDiagnostic }>(res);
       if (!res.ok) throw new Error(json?.error || "保存失败");
       setMessage("设置已保存");
+      if (json.diagnostic) setDiagnostic(json.diagnostic);
     } catch (e: unknown) {
       setMessage(formatClientError(e) || "保存失败");
     } finally {
@@ -77,6 +93,55 @@ export default function SettingsPage() {
   return (
     <div className="w-full h-full p-10 flex flex-col gap-8 bg-[var(--carpet-bg-soft)]">
       <PageHeader title="系统设置" />
+
+      {diagnostic ? (
+        <section className="carpet-card p-4 border border-[var(--carpet-border)] bg-[var(--carpet-bg-soft)]">
+          <h3 className="font-space-grotesk text-sm font-semibold text-[var(--carpet-text)] mb-2">
+            配置是否生效（诊断，不含密钥明文）
+          </h3>
+          <ul className="text-xs text-[var(--carpet-text-muted)] space-y-1.5 leading-relaxed">
+            <li>
+              <strong className="text-[var(--carpet-text)]">设置文件路径：</strong>
+              <code className="text-[10px] break-all">{diagnostic.settingsFile}</code>
+              <span className="block mt-0.5">
+                Docker 下一般为挂载卷内路径；与本地开发时的 <code className="text-[10px]">.data/settings.json</code>{" "}
+                不是同一个文件，换环境需重新保存或复制文件。
+              </span>
+            </li>
+            <li>
+              <strong className="text-[var(--carpet-text)]">文案 / 26 条 Prompt 实际模式：</strong>
+              {diagnostic.effectiveTextLlmProvider === "ark" ? "火山方舟" : "本地规则模板"}
+              {diagnostic.textLlmProviderEnv ? (
+                <span>
+                  （环境变量 <code className="text-[10px]">TEXT_LLM_PROVIDER={diagnostic.textLlmProviderEnv}</code>{" "}
+                  已覆盖界面「文案来源」）
+                </span>
+              ) : (
+                <span>（未设置 TEXT_LLM_PROVIDER，以本页「文案来源」为准）</span>
+              )}
+            </li>
+            <li>
+              <strong className="text-[var(--carpet-text)]">方舟 API Key 是否已配置：</strong>
+              {diagnostic.arkKeyConfigured ? "是" : "否"}
+              {diagnostic.arkKeyConfigured ? (
+                <span>
+                  ，当前解析来源：
+                  {diagnostic.arkKeySource === "env"
+                    ? "环境变量 ARK_API_KEY（优先于本页填写）"
+                    : diagnostic.arkKeySource === "textModelKey"
+                      ? "本页「文本 API Key」"
+                      : "本页「生图专用 API Key」（与文案共用时的回退顺序）"}
+                </span>
+              ) : (
+                <span>
+                  。若你已在界面填写，请确认已点「保存设置」，且容器能写入上述路径；或改用环境变量{" "}
+                  <code className="text-[10px]">ARK_API_KEY</code>。
+                </span>
+              )}
+            </li>
+          </ul>
+        </section>
+      ) : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <section className="carpet-card p-4 md:col-span-2">

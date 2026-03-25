@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useCallback } from "react";
+import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import type { AspectRatio, ProductImage, ProductImageType, PromptItem } from "@/lib/types";
@@ -55,6 +56,8 @@ export default function CreatePage() {
   const [busy, setBusy] = useState<"idle" | "upload" | "gen_prompts" | "create_task">("idle");
   const [error, setError] = useState<string | null>(null);
   const [promptGenHint, setPromptGenHint] = useState<string | null>(null);
+  /** 与 promptGenHint 同条展示：接口返回的「退回模板」等警告 */
+  const [hintIsWarning, setHintIsWarning] = useState(false);
 
   const selectedCount = useMemo(() => {
     if (!prompts) return 0;
@@ -68,7 +71,11 @@ export default function CreatePage() {
   const generatePrompts = async () => {
     setError(null);
     setPromptGenHint(null);
+    setHintIsWarning(false);
     setBusy("gen_prompts");
+    const ctrl = new AbortController();
+    const timeoutMs = 125_000;
+    const timer = window.setTimeout(() => ctrl.abort(), timeoutMs);
     try {
       const firstUrl = images[0]?.url;
       const referenceImageUrl =
@@ -79,6 +86,7 @@ export default function CreatePage() {
       const res = await fetch("/api/prompts/generate", {
         method: "POST",
         headers: { "content-type": "application/json" },
+        signal: ctrl.signal,
         body: JSON.stringify({
           productName,
           category,
@@ -95,19 +103,38 @@ export default function CreatePage() {
         prompts?: PromptItem[];
         promptSource?: string;
         textModel?: string;
+        warning?: string;
       }>(res);
       if (!res.ok) throw new Error(json?.error || "生成失败");
       const list = json.prompts ?? [];
+      if (list.length === 0) {
+        throw new Error("接口未返回任何 Prompt，请稍后重试或查看服务端日志");
+      }
       setPrompts(list);
       setSelectedIds(new Set(list.map((p) => p.id)));
-      if (json.promptSource === "ark") {
+      if (json.warning) {
+        setPromptGenHint(json.warning);
+        setHintIsWarning(true);
+      } else if (json.promptSource === "ark") {
         setPromptGenHint(`已由火山方舟生成（模型：${json.textModel ?? "—"}）`);
+        setHintIsWarning(false);
       } else {
         setPromptGenHint("已使用本地规则模板生成");
+        setHintIsWarning(false);
       }
     } catch (e: unknown) {
-      setError(formatClientError(e) || "生成失败");
+      const aborted =
+        (typeof DOMException !== "undefined" && e instanceof DOMException && e.name === "AbortError") ||
+        (e instanceof Error && e.name === "AbortError");
+      if (aborted) {
+        setError(
+          `生成超时（等待超过 ${Math.round(timeoutMs / 1000)} 秒）。若使用火山方舟，请检查网络与模型；或到系统设置将「文案来源」改为本地规则模板后重试。`,
+        );
+      } else {
+        setError(formatClientError(e) || "生成失败");
+      }
     } finally {
+      window.clearTimeout(timer);
       setBusy("idle");
     }
   };
@@ -165,11 +192,16 @@ export default function CreatePage() {
           error?: string;
           title?: string;
           text?: string;
+          warning?: string;
         }>(res);
         if (!res.ok) throw new Error(json?.error || "重新生成失败");
         const title = String(json.title ?? "").trim();
         const text = String(json.text ?? "").trim();
         if (!title || !text) throw new Error("接口未返回有效的 title/text");
+        if (json.warning) {
+          setPromptGenHint(json.warning);
+          setHintIsWarning(true);
+        }
 
         const newId = `prompt_${p.index}_${Date.now().toString(16)}`;
         setPrompts((prev) =>
@@ -308,18 +340,36 @@ export default function CreatePage() {
 
   return (
     <div className="w-full h-full p-10 flex flex-col gap-12 bg-[var(--carpet-bg-soft)]">
-      <header className="flex justify-between items-center w-full">
-        <h2 className="font-space-grotesk text-[40px] font-medium tracking-tight text-[#0D0D0D]">
-          地毯行业 AI 出图智能体
-        </h2>
-        <Button
-          onClick={generatePrompts}
-          disabled={busy !== "idle"}
-          variant="carpetAccent"
-          className="px-5 py-2.5 font-space-grotesk font-medium h-auto"
-        >
-          生成 26 条 Prompt
-        </Button>
+      <header className="flex flex-col gap-3 w-full shrink-0">
+        <div className="flex justify-between items-center w-full flex-wrap gap-3">
+          <h2 className="font-space-grotesk text-[40px] font-medium tracking-tight text-[#0D0D0D]">
+            地毯行业 AI 出图智能体
+          </h2>
+          <Button
+            type="button"
+            onClick={() => void generatePrompts()}
+            disabled={busy !== "idle" || regeneratingId !== null}
+            variant="carpetAccent"
+            className="px-5 py-2.5 font-space-grotesk font-medium h-auto"
+          >
+            {busy === "gen_prompts" ? "生成中…" : "生成 26 条 Prompt"}
+          </Button>
+        </div>
+        {error ? (
+          <div className="w-full rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">{error}</div>
+        ) : null}
+        {promptGenHint ? (
+          <div
+            className={cn(
+              "w-full rounded-md border px-3 py-2 text-sm",
+              hintIsWarning
+                ? "border-amber-200 bg-amber-50 text-amber-950"
+                : "border-[var(--carpet-border)] bg-[var(--carpet-bg-soft)] text-[var(--carpet-text-muted)]",
+            )}
+          >
+            {promptGenHint}
+          </div>
+        ) : null}
       </header>
 
       <div className="flex gap-12 w-full flex-1 min-h-0">
@@ -510,15 +560,17 @@ export default function CreatePage() {
           <Section title="5. Prompt（26 条，右侧可选中、可改、可单条重生成）→ 创建任务">
             <div className="flex gap-3">
               <Button
-                onClick={generatePrompts}
+                type="button"
+                onClick={() => void generatePrompts()}
                 disabled={busy !== "idle" || regeneratingId !== null}
                 variant="carpetSecondary"
                 className="flex-1 h-auto py-3"
               >
-                生成 26 条 Prompt
+                {busy === "gen_prompts" ? "生成中…" : "生成 26 条 Prompt"}
               </Button>
               <Button
-                onClick={createTask}
+                type="button"
+                onClick={() => void createTask()}
                 disabled={busy !== "idle" || regeneratingId !== null || selectedCount === 0}
                 variant="carpetAccent"
                 className="flex-1 h-auto py-3"
@@ -526,10 +578,7 @@ export default function CreatePage() {
                 创建任务（已选 {selectedCount} 条）
               </Button>
             </div>
-            {error ? <div className="text-sm font-inter text-[#E42313]">{error}</div> : null}
-            {promptGenHint ? (
-              <div className="text-sm font-inter text-[var(--carpet-text-muted)]">{promptGenHint}</div>
-            ) : null}
+            <p className="text-[11px] font-inter text-[#7A7A7A]">状态与报错见页面顶部标题旁提示。</p>
           </Section>
         </div>
 
