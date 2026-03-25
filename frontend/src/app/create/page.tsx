@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import type { AspectRatio, ProductImage, ProductImageType, PromptItem } from "@/lib/types";
 import { formatClientError, parseJsonResponse } from "@/lib/safe-json-response";
+import {
+  ECOMMERCE_PRESET_PACKAGES,
+  ECOMMERCE_PROMPT_GROUPS,
+  appendEntryToField,
+  applyPresetPackage,
+} from "@/lib/ecommerce-prompt-library";
 
 const RATIOS: { id: AspectRatio; label: string }[] = [
   { id: "1:1", label: "1:1 方形" },
@@ -363,6 +369,93 @@ export default function CreatePage() {
                   ))}
                 </div>
               ) : null}
+            </div>
+          </Section>
+
+          <Section title="2a. 电商提示词库（一键套餐 / 按条追加）">
+            <p className="font-inter text-xs text-[#7A7A7A] leading-relaxed">
+              以下为商用广告地毯向的专业词条与套餐。<strong className="text-[#0D0D0D]">一键套餐</strong>会覆盖下方「卖点 / 商用&家用场景 /
+              人群」四处文案；<strong className="text-[#0D0D0D]">按条追加</strong>会在对应文本框末尾去重追加一行。
+            </p>
+            <div className="flex flex-col gap-2">
+              <div className="font-inter text-xs font-semibold text-[#0D0D0D]">一键套餐</div>
+              <div className="flex flex-col gap-2">
+                {ECOMMERCE_PRESET_PACKAGES.map((pkg) => (
+                  <button
+                    key={pkg.id}
+                    type="button"
+                    disabled={busy !== "idle"}
+                    onClick={() => {
+                      const next = applyPresetPackage(pkg);
+                      setSellingPointsText(next.sellingPointsText);
+                      setScenesBusinessText(next.scenesBusinessText);
+                      setScenesHomeText(next.scenesHomeText);
+                      setTargetAudience(next.targetAudience);
+                    }}
+                    className="text-left border border-[var(--carpet-border)] rounded-[6px] p-3 bg-white hover:bg-[#FAFAFA] transition-colors disabled:opacity-50"
+                  >
+                    <div className="font-inter text-sm font-semibold text-[#0D0D0D]">{pkg.title}</div>
+                    <div className="font-inter text-xs text-[#7A7A7A] mt-1">{pkg.description}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 max-h-[320px] overflow-y-auto border border-[var(--carpet-border)] rounded-[6px] p-2 bg-[#FAFAFA]">
+              {ECOMMERCE_PROMPT_GROUPS.map((g) => (
+                <details key={g.id} className="border border-[var(--carpet-border)] rounded-[4px] bg-white p-2">
+                  <summary className="font-inter text-xs font-semibold text-[#0D0D0D] cursor-pointer">
+                    {g.title}
+                  </summary>
+                  <p className="font-inter text-[11px] text-[#7A7A7A] mt-1 mb-2">{g.description}</p>
+                  <ul className="space-y-2">
+                    {g.entries.map((e) => (
+                      <li key={e.id} className="flex flex-col gap-1 border-t border-[#EEE] pt-2 first:border-t-0 first:pt-0">
+                        <div className="font-inter text-xs text-[#0D0D0D]">
+                          <span className="text-[#7A7A7A]">[{e.channel}]</span> {e.title}
+                        </div>
+                        <p className="font-inter text-[11px] text-[#4A4A4A] leading-snug line-clamp-3" title={e.text}>
+                          {e.text}
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          <button
+                            type="button"
+                            disabled={busy !== "idle"}
+                            className="text-[11px] px-2 py-1 rounded border border-[var(--carpet-border)] bg-white hover:bg-[#F5F5F5]"
+                            onClick={() => {
+                              if (g.applyTo === "sellingPoints") {
+                                setSellingPointsText((t) => appendEntryToField("sellingPoints", t, e.text));
+                              } else if (g.applyTo === "scenesBusiness") {
+                                setScenesBusinessText((t) => appendEntryToField("scenesBusiness", t, e.text));
+                              } else if (g.applyTo === "scenesHome") {
+                                setScenesHomeText((t) => appendEntryToField("scenesHome", t, e.text));
+                              } else {
+                                setTargetAudience((t) => appendEntryToField("targetAudience", t, e.text));
+                              }
+                            }}
+                          >
+                            追加到
+                            {g.applyTo === "sellingPoints"
+                              ? "卖点"
+                              : g.applyTo === "scenesBusiness"
+                                ? "商用场景"
+                                : g.applyTo === "scenesHome"
+                                  ? "家用场景"
+                                  : "人群"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy !== "idle"}
+                            className="text-[11px] px-2 py-1 rounded border border-[var(--carpet-border)] bg-white hover:bg-[#F5F5F5]"
+                            onClick={() => void navigator.clipboard?.writeText(e.text)}
+                          >
+                            复制全文
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ))}
             </div>
           </Section>
 

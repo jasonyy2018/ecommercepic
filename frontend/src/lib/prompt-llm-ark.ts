@@ -9,7 +9,8 @@ const JSON_INSTRUCTION = `你是电商视觉策划。根据用户给出的商品
 2) JSON 格式严格为：{"prompts":[{"index":1,"type":"SCENE","title":"中文短标题","text":"英文提示词，逗号分隔关键词..."}, ...]}
 3) 恰好 26 条：index 从 1 到 26；其中 type 为 "SCENE" 的 17 条、"DETAIL" 的 5 条、"FUNCTIONAL" 的 3 条，顺序随意但类型数量必须正确。
 4) title 用中文；text 用英文，适合产品/场景商业摄影，可包含构图、光线、镜头、材质等。
-5) 内容需贴合用户商品品类与卖点，避免无关品类描述（若用户不是地毯，不要强行写地毯）。`;
+5) 内容需贴合用户商品品类与卖点，避免无关品类描述（若用户不是地毯，不要强行写地毯）。
+6) 若商品为商用地毯/门垫/广告地垫：SCENE 类英文 text 须包含抠图保真（preserve exact logo/color/texture）、双开玻璃门店入口、大面积地垫（非细长条）、自然日光与广角镜头、商用品牌识别价值等关键词；避免在毯面纹理上生成糊影或脏阴影的描述冲突。`;
 
 function normalizePromptType(s: string): PromptType | null {
   const u = s.toUpperCase();

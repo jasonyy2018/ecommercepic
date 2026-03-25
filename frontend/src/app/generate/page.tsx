@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
 import type { ProductImage, ProductImageType } from "@/lib/types";
 import { formatClientError, parseJsonResponse } from "@/lib/safe-json-response";
+import { DOORMAT_LONG_PROMPT_VARIANTS } from "@/lib/ecommerce-prompt-library";
 
 const SCENES = [
   { value: "door_mat", label: "门口地垫 / 商铺门面" },
@@ -28,8 +29,7 @@ type GenRow = {
 
 function defaultPrompt(scene: string) {
   const byScene: Record<string, string> = {
-    door_mat:
-      "先将地毯从原图完整抠出并去除背景，仅替换环境，不改动产品本体；logo文字、颜色、纹理、绒毛纤维、材质质感必须与原图100%一致，不得模糊、重绘、扭曲、缺损。场景为高端写字楼沿街商铺双开玻璃门入口，地毯紧贴门槛铺放，铺设面积大、比例适中（禁止细长条），地面瓷砖干净整洁。白天自然阳光斜射，超广角镜头20-24mm，平拍或轻微俯拍；门头有商家logo文字，门口两侧有绿植与营销立牌，店内光线温馨明亮、空间宽敞高级。2K超清，超写实，突出商用广告地毯提升门店辨识度与溢价能力。",
+    door_mat: DOORMAT_LONG_PROMPT_VARIANTS[0]?.text ?? "",
     carpet_living:
       "将地毯从原图无损抠图后合成到高端家居客厅，保持logo、颜色、纹路、材质完全一致，不得改变纤维细节；地毯边缘清晰无虚影。构图以地毯为主体，面积占比大，比例协调；自然日光+室内暖光混合，空间整洁有质感，2K超清超写实，适合电商主图。",
     nonwoven_bag:
@@ -331,6 +331,23 @@ export default function GeneratePage() {
               ))}
             </select>
           </label>
+          {scene === "door_mat" ? (
+            <div className="flex flex-col gap-2">
+              <span className="text-xs text-[var(--carpet-text-muted)]">词库快捷 · 门头车图（4 种镜位，点击填入）</span>
+              <div className="flex flex-wrap gap-2">
+                {DOORMAT_LONG_PROMPT_VARIANTS.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    className="text-xs px-2 py-1.5 rounded-md border border-[var(--carpet-border)] bg-[var(--carpet-bg-soft)] hover:bg-white text-left max-w-full"
+                    onClick={() => setPrompt(v.text)}
+                  >
+                    {v.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <label className="flex flex-col gap-1 text-sm flex-1 min-h-[120px]">
             <span className="text-[var(--carpet-text-muted)]">Prompt（可改）</span>
             <textarea
